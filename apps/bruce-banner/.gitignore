@@ -9,3 +9,6 @@ tests/e2e/out/
 # `npm run vendor` downloads them; see README.
 src/brand/
 tests/legacy/
+server/refs/
+# screenshots show the brand pictures and fonts: `node tests/e2e/shots.mjs` writes them locally
+docs/screens/

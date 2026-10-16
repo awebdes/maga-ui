@@ -8,7 +8,7 @@
 //                             not copied.
 // Both folders are gitignored while the repo is public. Run through the session proxy:
 //   NODE_USE_ENV_PROXY=1 node scripts/vendor-legacy.mjs [--origin https://bruce-banner.vercel.app]
-import { mkdir, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
@@ -75,6 +75,11 @@ async function main() {
     console.log(`  img/${id}.svg (inline ${v})`);
   }
   await writeFile(join(root, 'src/brand/manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+
+  // style references for the image model (GEMINI_STYLE_REFS=1), read by server/handlers.ts
+  await mkdir(join(root, 'server/refs'), { recursive: true });
+  for (const f of ['money-loan.png', 'deposit-time.png', 'mortgage.png']) await copyFile(join(root, 'src/brand/img', f), join(root, 'server/refs', f));
+  console.log('  server/refs: 3 style references');
 
   // the oracle module: the slice plus named exports
   const names = ['J5', 'qDe', 'z5', 'fOe', 'Y5', 'YDe', '$De', 'g7', 'h7', 'v7', '_Oe', 'a7', 'c7', 'f7', 'd7'];

@@ -14,10 +14,16 @@ const root = document.documentElement;
 const mqReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
 export const reduced = () => mqReduce.matches || root.classList.contains('reduce-motion');
 
+/** Per-app names: the localStorage prefix and the tooltip id. Set before `initTips`. */
+export const kitConfig = { prefix: 'mui:', tipId: 'mui-tip' };
+export function configureKit(c: Partial<typeof kitConfig>) {
+  Object.assign(kitConfig, c);
+}
+
 export const store = {
   get<T>(k: string, d: T): T {
     try {
-      const v = localStorage.getItem('kiln:' + k);
+      const v = localStorage.getItem(kitConfig.prefix + k);
       return v === null ? d : (JSON.parse(v) as T);
     } catch {
       return d;
@@ -25,7 +31,7 @@ export const store = {
   },
   set(k: string, v: unknown) {
     try {
-      localStorage.setItem('kiln:' + k, JSON.stringify(v));
+      localStorage.setItem(kitConfig.prefix + k, JSON.stringify(v));
     } catch {
       /* storage blocked — the page works without it */
     }
@@ -39,7 +45,8 @@ export const kit = {
   /** set while a drag or long action runs: keeps the chrome awake */
   busy: false,
   lastInputKeyboard: false,
-  settings: { focus: store.get('focus', true) },
+  /** focus mode (islands dim away from the cursor, chrome fades when idle); the app turns it on */
+  settings: { focus: false },
 };
 
 /* ---------- spring ---------- */
@@ -348,7 +355,7 @@ export function initTips() {
   const tip = document.createElement('div');
   tip.className = 'tip';
   tip.setAttribute('role', 'tooltip');
-  tip.id = 'kiln-tip';
+  tip.id = kitConfig.tipId;
   document.body.appendChild(tip);
   let showTimer = 0;
   let lastHide = 0;
@@ -394,7 +401,7 @@ export function initTips() {
       place(el);
       tip.classList.add('is-on');
     });
-    el.setAttribute('aria-describedby', 'kiln-tip');
+    el.setAttribute('aria-describedby', kitConfig.tipId);
   }
   function hide() {
     clearTimeout(showTimer);

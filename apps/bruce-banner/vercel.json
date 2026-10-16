@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/ai/brief.ts": { "maxDuration": 60 },
+    "api/ai/text.ts": { "maxDuration": 45 },
+    "api/ai/illustration.ts": { "maxDuration": 120, "includeFiles": "server/refs/**" }
+  }
+}

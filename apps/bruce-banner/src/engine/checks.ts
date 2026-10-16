@@ -3,7 +3,7 @@
  * overflow; contrast is a hint (several official templates sit near 2.6:1 white on colour and are
  * approved brand), numbers an AI added that are not in the brief are a warning.
  */
-import type { BannerLayout } from './layout';
+import { frameCorners, type BannerLayout } from './layout';
 import type { BannerDoc, Lang, SlotKey } from './types';
 
 export type Severity = 'error' | 'warn' | 'hint';
@@ -11,7 +11,7 @@ export type Severity = 'error' | 'warn' | 'hint';
 export interface Issue {
   lang: Lang;
   severity: Severity;
-  code: 'empty' | 'overflow' | 'shrunk' | 'numbers' | 'contrast';
+  code: 'empty' | 'overflow' | 'shrunk' | 'overlap' | 'numbers' | 'contrast';
   layerId?: string;
   slot?: SlotKey;
   message: string;
@@ -62,7 +62,71 @@ export function layoutIssues(doc: BannerDoc, lay: BannerLayout): Issue[] {
       out.push({ lang, severity: 'error', code: 'overflow', layerId: l.id, message: 'Бейджи выходят за баннер' });
     }
   }
+  return [...out, ...overlapIssues(doc, lay)];
+}
+
+/** A line of text a badge or the rate circle sits on (a longer translation runs under it). */
+export function overlapIssues(doc: BannerDoc, lay: BannerLayout): Issue[] {
+  const out: Issue[] = [];
+  const shapes = doc.layers.filter((l) => !l.hidden && ((l.kind === 'badge' && lay.badges[l.id]?.text) || (l.kind === 'stat' && lay.stats[l.id]?.text)));
+  if (!shapes.length) return out;
+  for (const l of doc.layers) {
+    if (l.hidden || l.kind !== 'text') continue;
+    const t = lay.texts[l.id];
+    if (!t?.lines.length) continue;
+    for (const s of shapes) {
+      const f = lay.frames[s.id];
+      if (!f) continue;
+      const shape = frameCorners(f);
+      const hit = t.lineWidths.some((w, i) => {
+        if (w <= 0) return false;
+        // the ink of a line: a band around its middle about as tall as the letters
+        const mid = t.top + (i + 0.5) * t.lineHeight;
+        const half = t.size * 0.36;
+        const box: [number, number][] = [
+          [l.x, mid - half],
+          [l.x + w, mid - half],
+          [l.x + w, mid + half],
+          [l.x, mid + half],
+        ];
+        return penetration(box, shape) > 1.5;
+      });
+      if (hit) out.push({ lang: lay.lang, severity: 'warn', code: 'overlap', layerId: s.id, slot: l.contentKey, message: `${s.kind === 'badge' ? 'Бейдж' : 'Курс'} закрывает ${slotLabel(l.contentKey).toLowerCase()}` });
+    }
+  }
   return out;
+}
+
+/** How deep two convex polygons overlap (separating axes), 0 when they do not. */
+export function penetration(a: [number, number][], b: [number, number][]) {
+  let depth = Infinity;
+  for (const poly of [a, b]) {
+    for (let i = 0; i < poly.length; i++) {
+      const [x1, y1] = poly[i];
+      const [x2, y2] = poly[(i + 1) % poly.length];
+      const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+      const ax = (y1 - y2) / len;
+      const ay = (x2 - x1) / len;
+      let aMin = Infinity;
+      let aMax = -Infinity;
+      let bMin = Infinity;
+      let bMax = -Infinity;
+      for (const [x, y] of a) {
+        const p = x * ax + y * ay;
+        aMin = Math.min(aMin, p);
+        aMax = Math.max(aMax, p);
+      }
+      for (const [x, y] of b) {
+        const p = x * ax + y * ay;
+        bMin = Math.min(bMin, p);
+        bMax = Math.max(bMax, p);
+      }
+      const o = Math.min(aMax, bMax) - Math.max(aMin, bMin);
+      if (o <= 0) return 0;
+      depth = Math.min(depth, o);
+    }
+  }
+  return depth;
 }
 
 /* ---------- numbers the AI added ---------- */

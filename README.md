@@ -17,6 +17,19 @@ node tests/e2e/app.mjs      # Playwright + SwiftShader WebGPU: редактор 
 node tests/e2e/lookdev.mjs  # сверка цветов с референсом (--ref путь к картинке)
 ```
 
+## Bruce Banner (`apps/bruce-banner/`)
+
+Промо-баннеры для приложения Ipoteka Bank (слот 328×106) на RU/UZ/EN для команд без дизайнера: бриф словами → AI пишет тексты на трёх языках и ставит иллюстрацию → проверка в телефоне → ZIP. Перенос старого Bruce Banner с паритетом рендера пиксель в пиксель — [`apps/bruce-banner/README.md`](apps/bruce-banner/README.md).
+
+```sh
+cd apps/bruce-banner
+npm install
+npm run vendor     # брендовые шрифты и картинки (не в git, пока репо публичный)
+npm run dev        # → localhost:5173, AI на моках, пока нет ключа Gemini
+npm test           # vitest: движок, проверки, вырезка фона, сервер AI
+npm run e2e:app    # Playwright: редактор, экспорт, превью
+```
+
 ## Запуск (прототип кита)
 
 Открыть `prototype/index.html` в браузере. Сборка и сервер не нужны (vanilla JS, без модулей, работает с `file://`).

@@ -32,6 +32,8 @@ export type FitStatus = 'ok' | 'shrunk' | 'overflow' | 'empty';
 export interface TextBlock {
   layerId: string;
   lines: string[];
+  /** width of each line, design px */
+  lineWidths: number[];
   subLines: string[];
   /** font size and line height actually used (auto-fit may have shrunk them) */
   size: number;
@@ -156,7 +158,7 @@ export function layoutBanner(doc: BannerDoc, lang: Lang, measure: Measure, opts:
 function layoutText(doc: BannerDoc, l: TextLayer, lang: Lang, measure: Measure, k: number, compat: boolean, H: number, row?: BadgeRowLayer): TextBlock {
   const text = textOf(doc, l.contentKey, lang);
   const sub = l.sub ? textOf(doc, l.sub.contentKey, lang) : '';
-  const empty: TextBlock = { layerId: l.id, lines: [], subLines: [], size: l.size, lineHeight: l.lineHeight, top: l.y, bottom: l.y, widest: 0, status: 'empty' };
+  const empty: TextBlock = { layerId: l.id, lines: [], lineWidths: [], subLines: [], size: l.size, lineHeight: l.lineHeight, top: l.y, bottom: l.y, widest: 0, status: 'empty' };
   if (!text && !sub) return empty;
 
   const rowH = row ? row.lineHeight + row.paddingY * 2 : 0;
@@ -176,12 +178,13 @@ function layoutText(doc: BannerDoc, l: TextLayer, lang: Lang, measure: Measure, 
     const subH = subLines.length && l.sub ? subLines.length * l.sub.lineHeight + l.sub.gap : 0;
     const height = lines.length * lineHeight + subH;
     const top = l.vAlign === 'middle' ? H / 2 - height / 2 : l.y;
-    const widest = Math.max(0, ...lines.map(w));
-    return { size, lineHeight, lines, subLines, top, bottom: top + height, widest, height };
+    const lineWidths = lines.map(w);
+    const widest = Math.max(0, ...lineWidths);
+    return { size, lineHeight, lines, lineWidths, subLines, top, bottom: top + height, widest, height };
   };
 
   let a = attempt(l.size);
-  if (compat) return { layerId: l.id, lines: a.lines, subLines: a.subLines, size: a.size, lineHeight: a.lineHeight, top: a.top, bottom: a.bottom, widest: a.widest, status: 'ok' };
+  if (compat) return { layerId: l.id, lines: a.lines, lineWidths: a.lineWidths, subLines: a.subLines, size: a.size, lineHeight: a.lineHeight, top: a.top, bottom: a.bottom, widest: a.widest, status: 'ok' };
 
   const fits = (r: ReturnType<typeof attempt>) => {
     if (r.lines.length > l.maxLines) return false;
@@ -199,7 +202,7 @@ function layoutText(doc: BannerDoc, l: TextLayer, lang: Lang, measure: Measure, 
     status = 'shrunk';
   }
   if (status === 'shrunk' && !fits(a)) status = 'overflow';
-  return { layerId: l.id, lines: a.lines, subLines: a.subLines, size: a.size, lineHeight: a.lineHeight, top: a.top, bottom: a.bottom, widest: a.widest, status };
+  return { layerId: l.id, lines: a.lines, lineWidths: a.lineWidths, subLines: a.subLines, size: a.size, lineHeight: a.lineHeight, top: a.top, bottom: a.bottom, widest: a.widest, status };
 }
 
 function layoutBadge(doc: BannerDoc, l: BadgeLayer, lang: Lang, measure: Measure, k: number): BadgeBlock {

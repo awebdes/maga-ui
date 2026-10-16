@@ -27,6 +27,19 @@ export function layerName(l: Layer) {
   return KIND_LABEL[l.kind];
 }
 
+/** Display names, numbered from the bottom when two layers share one: «Иллюстрация», «Иллюстрация 2». */
+export function layerNames(doc: BannerDoc): Map<string, string> {
+  const count = new Map<string, number>();
+  const names = new Map<string, string>();
+  for (const l of doc.layers) {
+    const base = layerName(l);
+    const n = (count.get(base) ?? 0) + 1;
+    count.set(base, n);
+    names.set(l.id, n > 1 ? `${base} ${n}` : base);
+  }
+  return names;
+}
+
 /* ---------- copy ---------- */
 
 export function ensureSlot(doc: BannerDoc, key: SlotKey) {
@@ -349,4 +362,82 @@ export function setPrimaryLanguage(doc: BannerDoc, lang: Lang) {
 /** Marks a language's AI text as checked by a person (clears the "проверьте" chip). */
 export function confirmLanguage(doc: BannerDoc, lang: Lang) {
   for (const slot of Object.values(doc.copy)) if (slot.src[lang] === 'ai') slot.src[lang] = 'user';
+}
+
+/* ---------- styling ---------- */
+
+/** Sets a text-like layer's type size (design px); line height keeps its ratio. */
+export function setTypeSize(doc: BannerDoc, id: string, size: number) {
+  const l = findLayer(doc, id);
+  if (!l || !(size > 0)) return;
+  if (l.kind === 'text' || l.kind === 'badge' || l.kind === 'badgeRow') {
+    const f = size / l.size;
+    l.lineHeight *= f;
+    l.size = size;
+    if (l.kind === 'text') l.minSize = Math.min(l.minSize, size);
+    else {
+      l.paddingX *= f;
+      l.paddingY *= f;
+    }
+  } else if (l.kind === 'stat') {
+    const f = size / l.size;
+    l.size = size;
+    l.unitSize *= f;
+    l.paddingX *= f;
+    l.paddingY *= f;
+    l.gap *= f;
+  }
+}
+
+/** Sets an image or card width in design px, keeping its proportions. */
+export function setWidth(doc: BannerDoc, id: string, w: number) {
+  const l = findLayer(doc, id);
+  if (!l || !(w > 0)) return;
+  if (l.kind === 'image' || l.kind === 'card') {
+    l.h *= w / l.w;
+    l.w = w;
+  } else if (l.kind === 'imageClip') scaleLayer(doc, id, w / l.img.width);
+  else if (l.kind === 'pill') scaleLayer(doc, id, w / l.w);
+  else if (l.kind === 'glow') l.r = w / 2;
+}
+
+/** The main colour of a layer: text fill, badge or stat background, glow colour. */
+export function setColor(doc: BannerDoc, id: string, color: string, foreground?: string) {
+  const l = findLayer(doc, id);
+  if (!l) return;
+  if (l.kind === 'text') l.color = color;
+  else if (l.kind === 'glow') l.color = color;
+  else if (l.kind === 'badge' || l.kind === 'stat') {
+    l.background = color;
+    if (foreground) l.foreground = foreground;
+  } else if (l.kind === 'badgeRow' && l.items[0]) {
+    l.items[0].background = color;
+    if (foreground) l.items[0].foreground = foreground;
+  }
+}
+
+/**
+ * Swaps an illustration's picture for one with `aspect` (w / h): the new picture takes the place
+ * the old one visibly occupied (`visible`: its opaque part as fractions of the frame), centred on
+ * it and fitted inside, so a tightly cropped drawing does not blow up to the old padded frame.
+ */
+export function replaceArt(doc: BannerDoc, id: string, ref: string, aspect: number, visible = { x: 0, y: 0, w: 1, h: 1 }) {
+  const l = findLayer(doc, id);
+  if (!l || l.kind !== 'image' || !(aspect > 0)) return;
+  const vw = l.w * visible.w;
+  const vh = l.h * visible.h;
+  // centre of the visible part, from the frame centre, in the layer's own (flipped, rotated) space
+  const ox = (visible.x + visible.w / 2 - 0.5) * l.w * (l.flip ? -1 : 1);
+  const oy = (visible.y + visible.h / 2 - 0.5) * l.h;
+  const a = (l.rot * Math.PI) / 180;
+  l.cx += ox * Math.cos(a) - oy * Math.sin(a);
+  l.cy += ox * Math.sin(a) + oy * Math.cos(a);
+  l.w = Math.min(vw, vh * aspect);
+  l.h = l.w / aspect;
+  l.src = ref;
+}
+
+export function setFlip(doc: BannerDoc, id: string, flip: boolean) {
+  const l = findLayer(doc, id);
+  if (l?.kind === 'image') l.flip = flip || undefined;
 }
