@@ -69,7 +69,7 @@ npm run dev        # localhost:5173
 
 ![Пример Safe в приложении, растровое превью](docs/lookdev/app-safe.png)
 ![Пример House, растровое превью](docs/lookdev/app-house.png)
-![Пример Pin и лист экспорта с QA-полоской](docs/lookdev/app-pin-export.png)
+![Лист экспорта: превью, QA-полоска 96/64/48 px, скачивание](docs/lookdev/app-export.png)
 
 ## Совместимость
 
