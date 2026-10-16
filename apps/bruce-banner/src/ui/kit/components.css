@@ -1,0 +1,1045 @@
+/* ============================================================
+   Components
+   Every interactive piece is a "cell" living inside a glass "island".
+   ============================================================ */
+
+/* ---------- Glass island ---------- */
+
+.glass {
+  position: relative;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--blur-glass);
+  backdrop-filter: var(--blur-glass);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-island);
+  isolation: isolate;
+}
+
+/* Rim light that follows the pointer along the border. --mx/--my/--rim are set from JS. */
+.glass::after,
+.rim::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    180px circle at var(--mx, -999px) var(--my, -999px),
+    rgba(255, 255, 255, 0.42),
+    rgba(255, 255, 255, 0) 70%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: var(--rim, 0);
+  transition: opacity 400ms var(--ease-out);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.island {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-island);
+  padding: var(--gap-island);
+  border-radius: calc(var(--r-md) + var(--gap-island));
+}
+
+/* ---------- Cell (base of every control) ---------- */
+
+.cell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--h-md);
+  padding: 0 14px;
+  border-radius: var(--r-md);
+  background: var(--cell);
+  color: var(--fg);
+  font-size: var(--fs-13);
+  font-weight: 500;
+  white-space: nowrap;
+  user-select: none;
+  transition: background-color var(--t-hover) var(--ease-out), color var(--t-hover) var(--ease-out),
+    transform var(--t-move) var(--spring-bounce), box-shadow var(--t-hover) var(--ease-out),
+    opacity var(--t-hover) var(--ease-out);
+}
+button.cell:hover,
+.cell.is-hover {
+  background: var(--cell-hover);
+}
+button.cell:active,
+.cell.is-active {
+  background: var(--cell-press);
+  transform: scale(0.96);
+  transition-duration: var(--t-press), var(--t-press), var(--t-press), var(--t-press), var(--t-press);
+  transition-timing-function: var(--ease-out);
+}
+.cell[disabled],
+.cell[aria-disabled="true"] {
+  opacity: 0.36;
+  pointer-events: none;
+}
+.cell.ghost {
+  background: transparent;
+  box-shadow: 0 0 0 1px var(--line-strong) inset;
+}
+button.cell.ghost:hover {
+  background: var(--cell);
+}
+.cell.clear {
+  background: transparent;
+}
+button.cell.clear:hover {
+  background: var(--cell);
+}
+.cell.sm {
+  height: var(--h-sm);
+  padding: 0 11px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-12);
+}
+.cell.lg {
+  height: var(--h-lg);
+  padding: 0 18px;
+  font-size: var(--fs-14);
+}
+.cell.caps {
+  font-weight: 400;
+}
+
+/* Icon button */
+.icon-btn {
+  width: var(--h-md);
+  padding: 0;
+  color: var(--fg-2);
+}
+.icon-btn.sm {
+  width: var(--h-sm);
+}
+.icon-btn.lg {
+  width: var(--h-lg);
+}
+button.icon-btn:hover {
+  color: var(--fg);
+}
+.icon-btn[aria-pressed="true"],
+.icon-btn[aria-expanded="true"] {
+  background: var(--fill-hot);
+  color: var(--fg);
+}
+
+/* Primary — the light one */
+.cell.primary {
+  background: var(--light);
+  color: var(--on-light);
+  box-shadow: 0 6px 18px -8px rgba(255, 255, 255, 0.35);
+}
+button.cell.primary:hover {
+  background: #ffffff;
+  box-shadow: 0 8px 26px -8px rgba(255, 255, 255, 0.5);
+}
+.cell.primary .i {
+  stroke: var(--on-light);
+}
+
+/* ---------- Juice button ----------
+   Light at rest. On hover it charges up: blue body, bloom behind the surrounding glass. */
+
+.juice-btn {
+  overflow: hidden;
+  isolation: isolate;
+}
+.juice-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 140% at 50% 120%, var(--juice-b) 0%, var(--juice-a) 55%, #1672e6 100%);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 260ms var(--ease-out), transform var(--t-move) var(--spring);
+  z-index: -1;
+}
+/* sheen sweep */
+.juice-btn::after {
+  content: "";
+  position: absolute;
+  inset: -20% auto -20% -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(0) skewX(-18deg);
+  opacity: 0;
+  pointer-events: none;
+}
+.juice-btn.is-charged {
+  color: #fff;
+  box-shadow: 0 10px 34px -6px rgba(31, 139, 255, 0.75), 0 0 0 1px rgba(160, 215, 255, 0.35) inset;
+}
+.juice-btn.is-charged .i {
+  stroke: #fff;
+}
+.juice-btn.is-charged::before {
+  opacity: 1;
+  transform: scale(1);
+}
+.juice-btn.is-charged::after {
+  animation: sheen 900ms var(--ease-out) 60ms both;
+}
+@keyframes sheen {
+  0% {
+    opacity: 0;
+    transform: translateX(0) skewX(-18deg);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(520%) skewX(-18deg);
+  }
+}
+.juice-btn.pill {
+  border-radius: var(--r-pill);
+}
+
+/* Busy state — progress fill inside a button */
+.cell .progress {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.28);
+  transform-origin: left center;
+  transform: scaleX(var(--p, 0));
+  transition: transform 160ms linear;
+  z-index: -1;
+  pointer-events: none;
+}
+.cell.is-busy {
+  pointer-events: none;
+}
+
+/* ---------- Segmented control ---------- */
+
+.seg {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: calc(var(--r-sm) + 3px);
+  background: rgba(0, 0, 0, 0.22);
+  box-shadow: 0 0 0 1px var(--line) inset;
+}
+.seg > button {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 30px;
+  padding: 0 9px;
+  border-radius: var(--r-sm);
+  color: var(--fg-3);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition: color var(--t-hover) var(--ease-out), transform var(--t-press) var(--ease-out);
+}
+.seg > button:hover {
+  color: var(--fg-2);
+}
+.seg > button:active {
+  transform: scale(0.92);
+}
+.seg > button[aria-checked="true"] {
+  color: var(--fg);
+}
+.seg .seg-ind {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  width: 0;
+  border-radius: var(--r-sm);
+  background: var(--fill-hot);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 4px 10px -4px rgba(0, 0, 0, 0.5);
+  transition: transform var(--t-move) var(--spring), width var(--t-move) var(--spring);
+  pointer-events: none;
+}
+.seg.no-anim .seg-ind {
+  transition: none;
+}
+.seg.icons > button {
+  width: 32px;
+  min-width: 32px;
+  padding: 0;
+}
+.seg.lg > button {
+  height: 36px;
+  min-width: 42px;
+  font-size: var(--fs-13);
+}
+
+/* ---------- Fill slider ----------
+   The whole cell is the control. Fill grows from the left; label swaps to value on hover/drag. */
+
+.fs {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--h-md);
+  min-width: 132px;
+  border-radius: var(--r-md);
+  background: var(--cell);
+  color: var(--fg);
+  overflow: hidden;
+  cursor: ew-resize;
+  user-select: none;
+  touch-action: none;
+  transform-origin: var(--origin, center);
+  transform: scaleX(var(--stretch, 1)) scaleY(var(--squash, 1));
+  transition: background-color var(--t-hover) var(--ease-out), transform var(--t-move) var(--spring-bounce);
+}
+.fs:hover {
+  background: var(--cell-hover);
+}
+.fs.is-dragging {
+  transition: background-color var(--t-hover) var(--ease-out);
+}
+.fs-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 100%;
+  background: var(--fill);
+  transform-origin: left center;
+  transform: scaleX(var(--v, 0.5));
+  transition: transform var(--t-move) var(--spring), background-color var(--t-hover) var(--ease-out);
+  border-radius: inherit;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.fs-fill::after {
+  /* the edge handle */
+  content: "";
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  right: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--fg);
+  opacity: 0;
+  transform: scaleX(calc(1 / max(var(--v, 0.5), 0.02)));
+  transform-origin: right center;
+  transition: opacity var(--t-hover) var(--ease-out);
+}
+.fs:hover .fs-fill::after,
+.fs.is-dragging .fs-fill::after,
+.fs:focus-visible .fs-fill::after {
+  opacity: 0.7;
+}
+.fs.is-dragging .fs-fill {
+  transition: background-color var(--t-hover) var(--ease-out);
+  background: var(--fill-hot);
+}
+.fs-text {
+  position: relative;
+  display: grid;
+  height: 100%;
+  width: 100%;
+  pointer-events: none;
+}
+.fs-label,
+.fs-value {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  font-size: var(--fs-13);
+  font-weight: 500;
+  transition: transform 320ms var(--spring), opacity 220ms var(--ease-out);
+}
+.fs-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  opacity: 0;
+  transform: translateY(70%);
+}
+.fs:hover .fs-label,
+.fs.is-dragging .fs-label,
+.fs:focus-visible .fs-label {
+  opacity: 0;
+  transform: translateY(-70%);
+}
+.fs:hover .fs-value,
+.fs.is-dragging .fs-value,
+.fs:focus-visible .fs-value {
+  opacity: 1;
+  transform: none;
+}
+.fs:focus-visible {
+  outline-offset: 2px;
+}
+
+/* split: label left, value right, both always visible (Strength 50%) */
+.fs.split .fs-text {
+  display: flex;
+  justify-content: space-between;
+}
+.fs.split .fs-label,
+.fs.split .fs-value {
+  opacity: 1;
+  transform: none;
+  padding: 0 10px;
+  font-size: var(--fs-11);
+}
+.fs.split .fs-label {
+  color: var(--fg-3);
+  font-weight: 400;
+}
+.fs.split .fs-value {
+  color: var(--fg-2);
+}
+
+/* stat: mono caps label top-left, big value bottom-left (Grid size 72 / 100) */
+.fs.stat {
+  height: 92px;
+  min-width: 200px;
+  border-radius: var(--r-lg);
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: 0 0 0 1px var(--line) inset;
+}
+.fs.stat .fs-fill {
+  background: rgba(255, 255, 255, 0.07);
+}
+.fs.stat.is-dragging .fs-fill {
+  background: rgba(255, 255, 255, 0.11);
+}
+.fs.stat .fs-fill::after {
+  top: 18px;
+  bottom: 18px;
+}
+.fs.stat .fs-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+.fs.stat .fs-label,
+.fs.stat .fs-value {
+  opacity: 1;
+  transform: none;
+  padding: 0;
+  justify-content: flex-start;
+}
+.fs.stat .fs-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  font-weight: 400;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.fs.stat .fs-value {
+  font-size: var(--fs-28);
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+.fs.stat .fs-value .of {
+  color: var(--fg-4);
+  margin-left: 0.25em;
+}
+
+/* large: property panel rows */
+.fs.lg {
+  height: var(--h-xl);
+  width: 100%;
+  border-radius: var(--r-md);
+  background: rgba(0, 0, 0, 0.26);
+}
+.fs.lg .fs-fill {
+  background: rgba(255, 255, 255, 0.16);
+}
+.fs.lg .fs-label,
+.fs.lg .fs-value {
+  font-size: var(--fs-16);
+  font-weight: 400;
+}
+
+/* vertical: zoom column */
+.fs.vertical {
+  width: 44px;
+  min-width: 0;
+  height: 120px;
+  cursor: ns-resize;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.03);
+  transform: scaleY(var(--stretch, 1)) scaleX(var(--squash, 1));
+}
+.fs.vertical:hover {
+  background: var(--cell);
+}
+.fs.vertical .fs-fill {
+  inset: auto 0 0 0;
+  width: auto;
+  height: 100%;
+  transform-origin: center bottom;
+  transform: scaleY(var(--v, 0.5));
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  background: rgba(255, 255, 255, 0.16);
+}
+.fs.vertical .fs-fill::after {
+  top: 0;
+  bottom: auto;
+  left: 12px;
+  right: 12px;
+  width: auto;
+  height: 2px;
+  transform: scaleY(calc(1 / max(var(--v, 0.5), 0.02)));
+  transform-origin: center top;
+}
+.fs.vertical .fs-label {
+  display: none;
+}
+.fs.vertical .fs-value {
+  font-size: var(--fs-10);
+  padding: 0;
+}
+
+/* ---------- Text field ---------- */
+
+.field {
+  height: var(--h-md);
+  width: 100%;
+  min-width: 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--cell);
+  color: var(--fg);
+  font-size: var(--fs-14);
+  transition: background-color var(--t-hover) var(--ease-out), box-shadow var(--t-hover) var(--ease-out);
+}
+.field::placeholder {
+  color: var(--fg-4);
+}
+.field:hover {
+  background: var(--cell-hover);
+}
+.field:focus {
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 1px var(--line-strong) inset;
+}
+.field.hero {
+  height: var(--h-lg);
+  text-align: center;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+textarea.field {
+  height: auto;
+  min-height: 44px;
+  padding: 11px 14px;
+  resize: none;
+  line-height: 1.45;
+  font-size: var(--fs-13);
+}
+
+/* ---------- Tag ---------- */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: var(--r-sm);
+  background: var(--cell);
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  transition: background-color var(--t-hover) var(--ease-out), color var(--t-hover) var(--ease-out),
+    transform var(--t-move) var(--spring-bounce);
+}
+.tag:hover {
+  color: var(--fg-2);
+  background: var(--cell-hover);
+}
+.tag:active {
+  transform: scale(0.94);
+  transition-duration: var(--t-press);
+}
+.tag[aria-pressed="true"] {
+  color: var(--on-light);
+  background: var(--light);
+}
+
+/* ---------- Switch ---------- */
+
+.switch {
+  position: relative;
+  width: 36px;
+  height: 22px;
+  flex: none;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.14);
+  transition: background-color 260ms var(--ease-out);
+}
+.switch::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--r-pill);
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: transform var(--t-move) var(--spring-bounce), width 200ms var(--ease-out);
+}
+.switch:active::before {
+  width: 21px;
+}
+.switch[aria-checked="true"] {
+  background: var(--juice-a);
+}
+.switch[aria-checked="true"]::before {
+  transform: translateX(14px);
+}
+.switch[aria-checked="true"]:active::before {
+  transform: translateX(9px);
+}
+
+/* ---------- Select + menu ---------- */
+
+.select {
+  position: relative;
+  display: inline-flex;
+}
+.select-btn {
+  justify-content: space-between;
+  min-width: 150px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  font-weight: 400;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+}
+.select-btn .caret {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid currentColor;
+  transition: transform var(--t-move) var(--spring-bounce);
+}
+.select-btn[aria-expanded="true"] .caret {
+  transform: rotate(180deg);
+}
+
+.menu {
+  position: absolute;
+  z-index: 60;
+  min-width: 100%;
+  padding: 6px;
+  border-radius: var(--r-md);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--blur-glass);
+  backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-pop);
+  transform-origin: var(--menu-origin, top left);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px) scale(0.94);
+  filter: blur(4px);
+  transition: opacity 180ms var(--ease-out), transform var(--t-pop) var(--spring), filter 220ms var(--ease-out),
+    visibility 0s linear 220ms;
+}
+.menu.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  filter: none;
+  transition: opacity 180ms var(--ease-out), transform var(--t-pop) var(--spring), filter 220ms var(--ease-out),
+    visibility 0s;
+}
+.menu.below {
+  top: calc(100% + 6px);
+  left: 0;
+}
+.menu.below-end {
+  top: calc(100% + 6px);
+  right: 0;
+  --menu-origin: top right;
+}
+.menu.above {
+  bottom: calc(100% + 8px);
+  left: 0;
+  --menu-origin: bottom left;
+  transform: translateY(4px) scale(0.94);
+}
+.menu.above-center {
+  bottom: calc(100% + 10px);
+  left: 50%;
+  --menu-origin: bottom center;
+  transform: translate(-50%, 4px) scale(0.94);
+}
+.menu.above-center.is-open {
+  transform: translate(-50%, 0);
+}
+.menu.above.is-open {
+  transform: none;
+}
+.menu-hl {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 0;
+  height: 36px;
+  border-radius: var(--r-sm);
+  background: var(--cell-hover);
+  opacity: 0;
+  transition: transform 260ms var(--spring), height 260ms var(--spring), opacity 160ms var(--ease-out);
+  pointer-events: none;
+}
+.menu-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  color: var(--fg-2);
+  text-align: left;
+  font-size: var(--fs-13);
+  transition: color 160ms var(--ease-out);
+}
+.menu-item:hover,
+.menu-item.is-kb {
+  color: var(--fg);
+}
+.menu-item .check {
+  margin-left: auto;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 200ms var(--ease-out), transform var(--t-move) var(--spring-bounce);
+}
+.menu-item[aria-checked="true"] {
+  color: var(--fg);
+}
+.menu-item[aria-checked="true"] .check {
+  opacity: 1;
+  transform: none;
+}
+.menu-item .kbd {
+  margin-left: auto;
+}
+.menu-item .sub {
+  display: block;
+  color: var(--fg-3);
+  font-size: var(--fs-12);
+}
+.menu-sep {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--line);
+}
+.menu-label {
+  padding: 8px 10px 4px;
+  color: var(--fg-3);
+}
+.select .menu .menu-item {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-10);
+}
+
+/* ---------- Tooltip ---------- */
+
+.tip {
+  position: fixed;
+  z-index: 200;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  border-radius: var(--r-xs);
+  background: rgba(14, 14, 16, 0.92);
+  box-shadow: 0 0 0 1px var(--line-strong) inset, 0 10px 24px -10px rgba(0, 0, 0, 0.8);
+  color: var(--fg);
+  font-size: var(--fs-12);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(var(--tx, 0), var(--ty, 0)) translateY(var(--tip-dy, 4px)) scale(0.96);
+  transition: opacity 140ms var(--ease-out), transform 260ms var(--spring);
+}
+.tip.is-on {
+  opacity: 1;
+  transform: translate(var(--tx, 0), var(--ty, 0));
+}
+.tip.instant {
+  transition: none;
+}
+
+/* ---------- Toast ---------- */
+
+.toast {
+  position: fixed;
+  z-index: 150;
+  left: 50%;
+  top: calc(76px + env(safe-area-inset-top, 0px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 14px 10px 10px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-13);
+  opacity: 0;
+  transform: translate(-50%, -16px) scale(0.92);
+  transition: opacity 220ms var(--ease-out), transform var(--t-pop) var(--spring-bounce);
+  pointer-events: none;
+}
+.toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.toast .dot {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-pill);
+  display: grid;
+  place-items: center;
+  background: var(--juice-a);
+  flex: none;
+}
+.toast .dot .i {
+  width: 13px;
+  height: 13px;
+  stroke: #fff;
+  stroke-width: 2.2;
+}
+.toast .meta {
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+}
+
+/* ---------- Material swatch sphere ---------- */
+
+.sphere {
+  --hx: 34%;
+  --hy: 28%;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at var(--hx) var(--hy), rgba(255, 255, 255, var(--spec, 0.75)) 0,
+      rgba(255, 255, 255, 0) var(--spec-size, 24%)),
+    radial-gradient(circle at 50% 115%, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 58%), var(--mat, #888);
+  box-shadow: inset -6px -10px 18px rgba(0, 0, 0, 0.38), inset 4px 6px 12px rgba(255, 255, 255, 0.08),
+    0 10px 18px -8px rgba(0, 0, 0, 0.7);
+  transition: transform var(--t-move) var(--spring-bounce);
+}
+
+.swatch {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 14%;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.045);
+  transition: background-color var(--t-hover) var(--ease-out), box-shadow 260ms var(--ease-out);
+}
+.swatch:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.swatch:hover .sphere {
+  transform: scale(1.08) rotate(-4deg);
+}
+.swatch:active .sphere {
+  transform: scale(0.94);
+  transition-duration: var(--t-press);
+}
+.swatch[aria-checked="true"] {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.75) inset;
+}
+
+/* ---------- Panel (material / properties) ---------- */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  max-height: min(560px, calc(100vh - 160px));
+  border-radius: var(--r-xl);
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+.panel-head {
+  position: relative;
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  padding: 12px 10px 8px;
+  flex: none;
+}
+.panel-head::before {
+  /* tinted glow taken from the current material */
+  content: "";
+  position: absolute;
+  left: 25%;
+  right: 25%;
+  top: -40px;
+  height: 90px;
+  border-radius: 50%;
+  background: var(--panel-glow, rgba(160, 120, 255, 0.4));
+  filter: blur(30px);
+  opacity: 0.55;
+  pointer-events: none;
+  transition: background-color 600ms var(--ease-out);
+}
+.panel-title {
+  position: relative;
+  grid-column: 2;
+  text-align: center;
+  font-size: var(--fs-16);
+  font-weight: 500;
+  height: 24px;
+  overflow: hidden;
+}
+.panel-title > span {
+  display: block;
+  line-height: 24px;
+  transition: transform 420ms var(--spring), opacity 240ms var(--ease-out);
+}
+.panel-close {
+  grid-column: 3;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  color: var(--fg-2);
+}
+.panel-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 10px 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.panel-section-label {
+  padding: 14px 0 8px;
+  text-align: center;
+  color: var(--fg-3);
+}
+.panel-body .stack {
+  display: grid;
+  gap: 8px;
+}
+
+.acc {
+  border-radius: var(--r-lg);
+  background: rgba(255, 255, 255, 0.035);
+  margin-bottom: 8px;
+}
+.acc-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px 10px 10px;
+  color: var(--fg-2);
+  font-size: var(--fs-16);
+  text-align: left;
+}
+.acc-head .sphere {
+  width: 36px;
+  flex: none;
+}
+.acc-head .tri {
+  margin-left: auto;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 7px solid var(--fg-3);
+  transform: rotate(180deg);
+  transition: transform var(--t-move) var(--spring-bounce);
+}
+.acc-head[aria-expanded="true"] .tri {
+  transform: none;
+}
+.acc-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--t-move) var(--spring);
+}
+.acc-body > div {
+  overflow: hidden;
+}
+.acc.is-open .acc-body {
+  grid-template-rows: 1fr;
+}
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 2px 8px 10px;
+}
+
+/* ---------- Shockwave ring on juice click ---------- */
+
+.shock {
+  position: fixed;
+  z-index: 8;
+  border-radius: var(--r-pill);
+  border: 2px solid rgba(120, 200, 255, 0.8);
+  pointer-events: none;
+  animation: shock 700ms var(--ease-out) forwards;
+}
+@keyframes shock {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}

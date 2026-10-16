@@ -1,0 +1,11 @@
+node_modules/
+dist/
+tests/e2e/out/
+.env.local
+.env*.local
+.vercel/
+# Brand files (Squad is a licensed Fontfabric font, PNGs belong to Ipoteka Bank) and the legacy
+# engine slice used as a parity oracle. They stay out of git while the repo is public.
+# `npm run vendor` downloads them; see README.
+src/brand/
+tests/legacy/

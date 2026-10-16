@@ -1,0 +1,302 @@
+/* ---------- Juice bloom layer ---------- */
+
+.juice {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 900ms var(--ease-out);
+}
+.juice.is-on {
+  opacity: 1;
+  transition: opacity 320ms var(--ease-out);
+}
+.juice i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  filter: blur(46px);
+  will-change: transform;
+}
+.juice .b1 {
+  width: 260px;
+  height: 200px;
+  margin: -100px 0 0 -130px;
+  background: radial-gradient(closest-side, rgba(31, 139, 255, 0.95), rgba(31, 139, 255, 0));
+}
+.juice .b2 {
+  width: 220px;
+  height: 220px;
+  margin: -110px 0 0 -110px;
+  background: radial-gradient(closest-side, rgba(255, 79, 110, 0.75), rgba(255, 79, 110, 0));
+}
+.juice .b3 {
+  width: 180px;
+  height: 160px;
+  margin: -80px 0 0 -90px;
+  background: radial-gradient(closest-side, rgba(110, 210, 255, 0.85), rgba(110, 210, 255, 0));
+}
+
+/* ---------- Chrome (floating islands) ---------- */
+
+.chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.float {
+  position: absolute;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+  transition: opacity 360ms var(--ease-out), transform 700ms var(--spring), visibility 0s;
+}
+/* Dim the islands themselves: opacity on an ancestor would cut their backdrop blur. */
+.float .island,
+.float .thumbs {
+  opacity: calc(var(--dim-floor, 1) + (1 - var(--dim-floor, 1)) * var(--prox, 1));
+  transition: opacity 360ms var(--ease-out);
+}
+.float.tl {
+  top: calc(20px + env(safe-area-inset-top, 0px));
+  left: calc(20px + env(safe-area-inset-left, 0px));
+  align-items: center;
+}
+.float.tr {
+  top: calc(20px + env(safe-area-inset-top, 0px));
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  align-items: center;
+}
+.float.bl {
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  left: calc(20px + env(safe-area-inset-left, 0px));
+  flex-direction: column;
+  align-items: flex-start;
+}
+.float.br {
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  align-items: flex-end;
+}
+.float.bc {
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: column;
+  align-items: stretch;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+.float.rm {
+  top: 50%;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  transform: translateY(-50%);
+}
+.float.tc {
+  top: calc(20px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* idle: chrome steps back, the object stays */
+.app.is-idle .float:not(.is-pinned) .island,
+.app.is-idle .float:not(.is-pinned) .thumbs {
+  opacity: 0.08;
+  transition: opacity 900ms var(--ease-out);
+}
+.app.is-idle .float.tl:not(.is-pinned) {
+  transform: translate(-6px, -6px);
+}
+.app.is-idle .float.tr:not(.is-pinned) {
+  transform: translate(6px, -6px);
+}
+.app.is-idle .float.bl:not(.is-pinned) {
+  transform: translate(-6px, 6px);
+}
+.app.is-idle .float.br:not(.is-pinned) {
+  transform: translate(6px, 6px);
+}
+.app.is-idle .float.bc:not(.is-pinned) {
+  transform: translate(-50%, 10px);
+}
+.app.is-idle .float.rm:not(.is-pinned) {
+  transform: translate(8px, -50%);
+}
+.app.chrome-hidden .float {
+  opacity: 0 !important;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 360ms var(--ease-out), transform 700ms var(--spring), visibility 0s linear 360ms;
+}
+
+/* Brand */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--h-md);
+  padding: 0 12px 0 8px;
+  border-radius: var(--r-md);
+  font-size: var(--fs-14);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.brand .logo {
+  display: grid;
+  grid-template-columns: repeat(4, 4px);
+  gap: 2px;
+}
+.brand .logo i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--fg);
+  transition: transform 500ms var(--spring-bounce), opacity 300ms var(--ease-out);
+  transition-delay: calc(var(--d) * 28ms);
+}
+.brand:hover .logo i {
+  transform: scale(0.4);
+  opacity: 0.5;
+}
+.brand .caret {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--fg-3);
+  transition: transform var(--t-move) var(--spring-bounce);
+}
+.brand[aria-expanded="true"] .caret {
+  transform: rotate(180deg);
+}
+
+/* Dock */
+.dock {
+  justify-content: center;
+}
+.dock .cell,
+.dock .fs {
+  height: var(--h-lg);
+}
+.dock .field.hero {
+  width: 230px;
+}
+.dock .fs {
+  min-width: 140px;
+}
+.dock .seg > button {
+  height: 34px;
+}
+.dock-enh .fs.split {
+  min-width: 150px;
+}
+.dock > * {
+  flex-shrink: 0;
+}
+#enhance-btn,
+#kit-busy {
+  min-width: 152px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Font button */
+.aa {
+  font-family: "Bagel Fat One", var(--font-ui);
+  font-size: 22px;
+  font-weight: 400;
+  width: var(--h-lg);
+  padding: 0;
+}
+
+/* Zoom column */
+.zoom {
+  flex-direction: column;
+  padding: 6px;
+  gap: 2px;
+}
+.zoom .icon-btn {
+  width: 44px;
+  height: 40px;
+}
+
+/* Material button */
+.mat-btn {
+  width: 64px;
+  height: 64px;
+  padding: 8px;
+  border-radius: var(--r-lg);
+}
+.mat-btn .sphere {
+  width: 44px;
+}
+.mat-btn:hover .sphere {
+  transform: rotate(-12deg) scale(1.06);
+}
+
+/* Panels anchored bottom-left */
+.panels {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 10px);
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+.panels .panel {
+  pointer-events: auto;
+  transform-origin: bottom left;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(14px) scale(0.92);
+  filter: blur(8px);
+  transition: opacity 220ms var(--ease-out), transform var(--t-pop) var(--spring), filter 260ms var(--ease-out),
+    visibility 0s linear 260ms;
+}
+.panels .panel + .panel {
+  transition-delay: 0s, 40ms, 0s, 0s;
+}
+.panels.is-open .panel {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  filter: none;
+  transition: opacity 220ms var(--ease-out), transform var(--t-pop) var(--spring), filter 260ms var(--ease-out),
+    visibility 0s;
+}
+.panels.is-open .panel + .panel {
+  transition-delay: 60ms;
+}
+.panels .panel.props {
+  width: 280px;
+}
+
+/* Environment + orbit */
+.env-thumb {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+}
+.env-thumb > span {
+  position: absolute;
+  inset: 0;
+  transition: opacity 500ms var(--ease-out), transform 600ms var(--spring);
+}
+.env-thumb > span.studio {
+  background: radial-gradient(70% 45% at 50% 0%, rgba(255, 255, 255, 0.75), transparent 70%),
+    linear-gradient(180deg, #6b6b72 0%, #3a3a40 58%, #232327 59%, #141416 100%);
+}
+.env-thumb > span.dusk {
+  background: radial-gradient(18% 18% at 62% 52%, #ffd9b0 0 60%, transparent 100%),
+    linear-gradient(180deg, #2b2350 0%, #8a5a8c 50%, #e3a08a 58%, #2a1c33 59%, #120c1a 100%);
+}
+.env-thumb > span.void {
+  background: radial-gradient(30% 20% at 50% 40%, #2a2a2e, #000 75%);
+}
+.env-thumb > span:not(.is-on) {
+  opacity: 0;
+  transform: scale(1.3);
+}
