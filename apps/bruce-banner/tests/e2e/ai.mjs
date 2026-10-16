@@ -66,6 +66,20 @@ try {
   const placed = await bb((id) => window.__bb.editor.doc.layers.find((l) => l.id === id), art.id);
   check(placed.src.startsWith('blob:') && placed.w < art.w, `it replaces the illustration, fitted to the old picture (${art.w.toFixed(0)} → ${placed.w.toFixed(0)} px)`);
 
+  /* ---------- «Мои картинки»: the drawing is there in any banner ---------- */
+  const drawn = placed.src;
+  const back = await bb(() => window.__bb.editor.doc.id);
+  await bb(() => window.__bb.flushSave());
+  await bb(() => window.__bb.openTemplate('cumulative'));
+  await bb(() => window.__bb.editor.select(window.__bb.editor.doc.layers.find((l) => l.kind === 'image').id));
+  await page.waitForSelector('#inspector .asset-mine .asset');
+  check((await page.getAttribute('#inspector .asset-mine .asset', 'data-ref')) === drawn, 'another banner offers the drawing under «Мои картинки»');
+  await page.click('#inspector .asset-mine .asset');
+  check(await bb((ref) => window.__bb.editor.doc.layers.find((l) => l.kind === 'image').src === ref, drawn), 'one click puts it there');
+  await page.evaluate((id) => (location.hash = `#/b/${id}`), back);
+  await page.waitForFunction((id) => window.__bb.editor.doc?.id === id, back);
+  await wait(400);
+
   /* ---------- a late answer never overwrites a hand edit ---------- */
   await page.route('**/api/ai/text', async (route) => {
     await new Promise((r) => setTimeout(r, 900));

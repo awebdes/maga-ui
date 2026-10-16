@@ -13,10 +13,18 @@
   display: none !important;
 }
 
+/* the page itself never scrolls: the start and the variants scroll inside */
+html,
+body {
+  overflow: hidden;
+}
+
 .app {
   position: fixed;
   inset: 0;
   overflow: hidden;
+  /* not a scroll container at all: focus or scrollIntoView can never shift the whole app */
+  overflow: clip;
 }
 
 /* ---------- modes: start, variants, editor, preview ---------- */
@@ -465,6 +473,15 @@ canvas.ghost {
   font-size: var(--fs-12);
   line-height: 1.4;
 }
+.insp-hint {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 194, 71, 0.1);
+  color: #ffd98a;
+  font-size: var(--fs-12);
+  line-height: 1.4;
+}
 .hint.center {
   text-align: center;
   padding: 14px 8px 4px;
@@ -603,11 +620,16 @@ button.asset:active {
   color: var(--fg-3);
   text-align: center;
 }
-.asset-custom:empty {
-  display: none;
+.asset-mine-wrap {
+  display: grid;
+  gap: 6px;
 }
-.asset-custom .asset {
-  height: 100%;
+.asset-sub {
+  color: var(--fg-4);
+  padding-top: 2px;
+}
+.asset.is-own {
+  background: repeating-conic-gradient(#232327 0 25%, #1d1d21 0 50%) 0 0 / 12px 12px;
 }
 .asset-tools {
   display: flex;

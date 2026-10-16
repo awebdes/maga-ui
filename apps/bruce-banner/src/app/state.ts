@@ -32,6 +32,9 @@ export class Editor {
   private listeners = new Set<(e: EditorEvent) => void>();
   private layouts = new Map<string, BannerLayout>();
   private issueCache = new Map<string, Issue[]>();
+  /** checks that need pixels (contrast), set by the app; mid-gesture the last result stands */
+  pixelChecks: ((doc: BannerDoc, lang: Lang, lay: BannerLayout) => Issue[]) | null = null;
+  private pixelCache = new Map<Lang, Issue[]>();
 
   subscribe(fn: (e: EditorEvent) => void) {
     this.listeners.add(fn);
@@ -110,6 +113,7 @@ export class Editor {
   /** Opens a document; history starts fresh for it. */
   open(doc: BannerDoc) {
     this.gestureStart = null;
+    this.pixelCache.clear();
     this.history.clear();
     this.doc = doc;
     this.selection = null;
@@ -191,7 +195,13 @@ export class Editor {
     if (!this.doc) return [];
     let list = this.issueCache.get(lang);
     if (!list) {
-      list = [...layoutIssues(this.doc, this.layout(lang)!), ...numberIssues(this.doc, lang)];
+      const lay = this.layout(lang)!;
+      let px = this.pixelCache.get(lang) ?? [];
+      if (this.pixelChecks && !this.gestureStart) {
+        px = this.pixelChecks(this.doc, lang, lay);
+        this.pixelCache.set(lang, px);
+      }
+      list = [...layoutIssues(this.doc, lay), ...numberIssues(this.doc, lang), ...px];
       this.issueCache.set(lang, list);
     }
     return list;

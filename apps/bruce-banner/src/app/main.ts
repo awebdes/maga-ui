@@ -1,15 +1,18 @@
 import '../ui/kit/tokens.css';
 import '../ui/kit/components.css';
 import '../ui/kit/stage.css';
+import '../ui/kit/coach.css';
 import './styles.css';
 import { ASSETS, LANGS, addLayer, docFromTemplate, duplicateLayer, findLayer, newId, removeLayer, replaceArt, setAsset, type BannerDoc, type Lang, type Layer } from '../engine';
 import { opaqueBox } from '../render/alpha';
+import { contrastIssues } from '../render/contrast';
 import { drawBanner, renderToBlob } from '../render/draw';
 import { brandFontsAvailable, loadBrandFonts } from '../render/fonts';
 import { brandImagesAvailable, loadImage, onImageLoad, preloadDoc } from '../render/images';
 import { resetMeasure } from '../render/measure';
 import { $, configureKit, initTips, kit, pop, refreshRim, store, toast, wake } from '../ui/kit/core';
 import { initComponents } from '../ui/kit/components';
+import { Coach } from '../ui/kit/coach';
 import { Preview } from '../preview/preview';
 import { accessCode, ai, resetCatalog } from './ai-client';
 import { AccessCode, ArtGenerator, TextTools, Variants, type AiState } from './ai-flows';
@@ -23,7 +26,7 @@ import { LayoutPicker } from './layouts';
 import { Manipulator } from './manipulate';
 import { Stage } from './stage';
 import { Editor } from './state';
-import { deleteProject, exportBannerFile, importBannerFile, listProjects, loadProject, putImage, requestPersistence, saveProject, saveThumb, storageAvailable } from './storage';
+import { deleteProject, exportBannerFile, importBannerFile, listArt, listProjects, loadProject, putImage, requestPersistence, saveProject, saveThumb, storageAvailable, type ArtMeta } from './storage';
 import { TextPop } from './text-pop';
 
 /* ---------- kit ---------- */
@@ -37,6 +40,7 @@ if (store.get('reduceMotion', false)) document.documentElement.classList.add('re
 /* ---------- editor ---------- */
 
 const editor = new Editor();
+editor.pixelChecks = contrastIssues;
 const stageEl = $('#stage')!;
 const stage = new Stage(editor, stageEl, $('#banners')!, $<SVGSVGElement>('#overlay')!, $<HTMLCanvasElement>('#ghost')!);
 const textPop = new TextPop(editor, stage);
@@ -51,6 +55,8 @@ const layouts = new LayoutPicker(editor);
 const inspector = new Inspector(editor, $('#inspector')!, {
   openLayouts: (anchor) => layouts.toggle(anchor),
   uploadImage: (id, file) => void placeImage(file, id),
+  useArt: (id, art) => useArt(id, art),
+  listArt: () => listArt(),
   generateImage: (id, anchor) => artGen.open(id, anchor),
   aiText: (op, layer, anchor) => void textTools.run(op, layer, anchor),
   aiEnabled: () => aiOn(),
@@ -206,6 +212,7 @@ async function openDoc(doc: BannerDoc, opts: { save?: boolean; saved?: boolean; 
   setSaveState('saved');
   if (opts.save) void flushSave();
   if (opts.suggestArt && aiOn()) suggestArt(opts.suggestArt);
+  else maybeTour();
 }
 
 /** After an AI variant: the art layer is selected and the drawing panel opens with what to draw. */
@@ -324,7 +331,7 @@ async function placeImage(file: File, targetId: string | null) {
     toast('Не получилось открыть картинку', file.name, 'error');
     return;
   }
-  const ref = await putImage(file);
+  const ref = await putImage(file, { w, h, source: 'upload' });
   const doc = editor.doc;
   if (!doc) return;
   const target = targetId ? findLayer(doc, targetId) : null;
@@ -351,6 +358,21 @@ async function placeImage(file: File, targetId: string | null) {
   });
   editor.select(id);
   toast('Картинка на баннере', 'хранится в этом браузере');
+}
+
+/** A picture from «Мои картинки» into an illustration, fitted like a new one. */
+function useArt(layerId: string, art: ArtMeta) {
+  const target = editor.doc && findLayer(editor.doc, layerId);
+  if (!target) return;
+  const visible = target.kind === 'image' ? opaqueBox(target.src) : undefined;
+  editor.change((d) => {
+    const l = findLayer(d, layerId);
+    if (l?.kind === 'image') replaceArt(d, layerId, art.ref, art.w / art.h, visible);
+    else if (l?.kind === 'imageClip') {
+      setAsset(d, layerId, art.ref);
+      l.img.height = (l.img.width * art.h) / art.w;
+    }
+  });
 }
 
 let dragDepth = 0;
@@ -461,6 +483,51 @@ function closePreview() {
   $('#preview-btn')!.focus();
 }
 
+/* ---------- first-run tour ---------- */
+
+const rectOf = (sel: string) => document.querySelector(sel)?.getBoundingClientRect() ?? null;
+const coach = new Coach(
+  [
+    {
+      target: () => {
+        const p = stage.active;
+        return p ? new DOMRect(p.x, p.y, p.w, p.h) : null;
+      },
+      title: 'Это ваш баннер',
+      text: 'Кликните по тексту или картинке, чтобы изменить. Двойной клик по тексту — поля сразу на трёх языках. Тащите, чтобы подвинуть.',
+    },
+    {
+      target: () => rectOf('#dock'),
+      title: 'Три языка',
+      text: 'RU · UZ · EN переключают баннер. Точка у языка: зелёная — всё влезает, жёлтая — стоит посмотреть, красная — текст не влезает.',
+    },
+    {
+      target: () => rectOf('#inspector'),
+      title: 'Свойства',
+      text: 'Ничего не выбрано — тема, раскладка и языки. У текста — ✨ Короче, Иначе, Перевести. У иллюстрации — библиотека, своя картинка или ✨ Нарисовать.',
+    },
+    {
+      target: () => rectOf('#preview-btn'),
+      title: 'Как в приложении',
+      text: 'Превью показывает баннер на главной Ipoteka в телефоне, на любом из трёх языков. Клавиша P.',
+    },
+    {
+      target: () => rectOf('#export-btn'),
+      title: 'Скачать',
+      text: 'ZIP со всеми языками в размерах @1x, @2x, @3x и файл с текстами для CMS. Баннер сохраняется сам — он появится в «Моих баннерах».',
+    },
+  ],
+  { label: 'Как пользоваться', done: 'Понятно', onStop: () => store.set('toured', true) },
+);
+$('#settings-menu [data-action="tour"]')!.addEventListener('click', () => {
+  pop.closeAll();
+  if (editor.mode === 'editor') coach.start();
+});
+function maybeTour() {
+  if (store.get('toured', false) || coach.isOn || navigator.webdriver) return;
+  setTimeout(() => editor.mode === 'editor' && !coach.isOn && coach.start(), 900);
+}
+
 /* ---------- one render loop for every change ---------- */
 
 editor.subscribe((e) => {
@@ -479,6 +546,7 @@ editor.subscribe((e) => {
     layers.render();
   }
   syncChrome();
+  if (e.view || e.replaced) coach.place();
   if (e.doc && !e.replaced && editor.doc) scheduleSave();
 });
 

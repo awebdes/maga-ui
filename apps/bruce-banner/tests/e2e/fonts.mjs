@@ -35,7 +35,7 @@ try {
           if (l.sub) for (const ch of doc.copy[l.sub.contentKey]?.[lang] ?? '') chars[l.sub.font].add(ch);
         }
         for (const l of doc.layers) if (l.kind === 'badge' || l.kind === 'badgeRow' || l.kind === 'stat') for (const k of l.kind === 'badgeRow' ? l.items.map((i) => i.contentKey) : [l.contentKey, l.unitContentKey].filter(Boolean)) for (const ch of doc.copy[k]?.[lang] ?? '') chars[l.font].add(ch);
-        for (const i of window.__bb.editor.issues(lang)) if (i.code === 'overlap' || i.code === 'shrunk') rows.push({ id, lang, note: `${i.code}: ${i.message}` });
+        for (const i of window.__bb.editor.issues(lang)) if (i.code === 'overlap' || i.code === 'shrunk' || i.code === 'contrast') rows.push({ id, lang, note: `${i.code}: ${i.message}`, contrast: i.code === 'contrast' });
       }
     }
     return { rows, chars: { body: [...chars.body].join(''), head: [...chars.head].join('') } };
@@ -45,7 +45,9 @@ try {
   const over = texts.filter((r) => r.status === 'overflow');
   check(texts.length >= 45, `${texts.length} official texts laid out`);
   check(over.length === 0, `none overflows${over.length ? `: ${over.map((r) => `${r.id}/${r.lang}`).join(', ')}` : ''}`);
-  const notes = rows.filter((r) => r.note);
+  const low = rows.filter((r) => r.contrast);
+  check(low.length === 0, `no approved template gets a contrast hint${low.length ? `: ${low.map((r) => `${r.id}/${r.lang}`).join(', ')}` : ''}`);
+  const notes = rows.filter((r) => r.note && !r.contrast);
   if (notes.length) console.log(`  for the record (official copy as approved):\n${notes.map((r) => `    ${r.id.padEnd(13)} ${r.lang}  ${r.note}`).join('\n')}`);
 
   // a glyph is missing when the text falls back: it measures like monospace AND like serif

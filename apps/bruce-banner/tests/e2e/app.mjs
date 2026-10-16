@@ -35,6 +35,25 @@ try {
   check(await bb(() => window.__bb.editor.doc.layers.length === 4), 'loan template opens with its 4 layers');
   check((await page.locator('#layers .layer-row').count()) === 4, 'layers list shows them');
 
+  /* ---------- the tour (auto on first run for people, from the menu here) ---------- */
+  await page.click('[data-menu="settings-menu"]');
+  await page.click('#settings-menu [data-action="tour"]');
+  await page.waitForSelector('.coach-wrap.is-open');
+  await wait(700);
+  const ring = await bb(() => document.querySelector('.spot').getBoundingClientRect().width);
+  check(ring > 300, 'the tour opens on the banner with a spotlight');
+  for (let i = 0; i < 4; i++) await page.click('.coach-foot .cell.ghost');
+  await wait(700);
+  const onExport = await bb(() => {
+    const s = document.querySelector('.spot').getBoundingClientRect();
+    const b = document.querySelector('#export-btn').getBoundingClientRect();
+    return Math.abs(s.left + 6 - b.left) < 2 && Math.abs(s.width - 12 - b.width) < 2;
+  });
+  check(onExport, 'the last step points at Export');
+  await page.click('.coach-foot .cell.ghost');
+  await wait(300);
+  check(!(await page.isVisible('.coach-wrap.is-open')) && (await bb(() => localStorage.getItem('bb:toured'))) === 'true', '«Понятно» closes it for good');
+
   /* ---------- floating text editor, overflow in UZ ---------- */
   const title = await bb(() => window.__bb.frameRect('title'));
   await page.mouse.dblclick(title.cx, title.cy);
@@ -77,6 +96,19 @@ try {
   check(Math.abs(cx1 - cx0 - 36 / zoom) < 0.6, `dragging the badge moves it in design px (${(cx1 - cx0).toFixed(2)} ≈ ${(36 / zoom).toFixed(2)})`);
   await ruKey('я', 'KeyZ', { ctrlKey: true });
   check(Math.abs((await bb(() => window.__bb.editor.doc.layers.find((l) => l.id === 'badge').cx)) - cx0) < 1e-6, 'the drag is one undo step');
+
+  /* ---------- contrast hint ---------- */
+  await bb(() => window.__bb.editor.change((d) => {
+    d.theme = 'light';
+    d.background = { type: 'solid', color: '#EBEEF2' };
+  }));
+  await bb(() => window.__bb.editor.select('title'));
+  await wait(300);
+  check(await page.isVisible('#inspector .insp-hint'), 'white text on a light background gets a readability hint');
+  check((await bb(() => window.__bb.editor.issues('ru').find((i) => i.code === 'contrast')?.severity)) === 'hint', 'it is a hint, not a gate');
+  await ruKey('я', 'KeyZ', { ctrlKey: true });
+  await bb(() => window.__bb.editor.select(null));
+  await wait(200);
 
   /* ---------- export ---------- */
   await page.click('#export-btn');

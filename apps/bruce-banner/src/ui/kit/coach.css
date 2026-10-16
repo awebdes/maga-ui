@@ -1,0 +1,134 @@
+/* Coach card and spotlight ring, ported from prototype/css (components.css, stage.css). */
+
+.coach-wrap {
+  position: fixed;
+  z-index: 75;
+  left: 0;
+  top: 0;
+  pointer-events: auto;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.94);
+  filter: blur(8px);
+  transition: opacity 240ms var(--ease-out), transform var(--t-pop) var(--spring), filter 260ms var(--ease-out),
+    left 520ms var(--spring), top 520ms var(--spring), visibility 0s linear 260ms;
+}
+.coach-wrap.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  filter: none;
+  transition: opacity 240ms var(--ease-out), transform var(--t-pop) var(--spring), filter 260ms var(--ease-out),
+    left 520ms var(--spring), top 520ms var(--spring), visibility 0s;
+}
+.coach {
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  padding: 16px;
+  border-radius: var(--r-xl);
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-pop);
+}
+.coach-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 20px;
+  margin-bottom: 10px;
+}
+.dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.dots > i {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: var(--fg-4);
+  transition: width var(--t-move) var(--spring), background-color 300ms var(--ease-out);
+}
+.dots > i.done {
+  background: var(--fg-3);
+}
+.dots > i.on {
+  width: 16px;
+  background: var(--fg);
+}
+.coach-close {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-xs);
+  color: var(--fg-2);
+}
+.coach-body {
+  display: grid;
+}
+.coach-step {
+  grid-area: 1 / 1;
+  transition: transform 520ms var(--spring), opacity 260ms var(--ease-out), filter 260ms var(--ease-out);
+}
+.coach-step.out-left {
+  transform: translateX(-24px);
+  opacity: 0;
+  filter: blur(4px);
+  pointer-events: none;
+}
+.coach-step.out-right {
+  transform: translateX(24px);
+  opacity: 0;
+  filter: blur(4px);
+  pointer-events: none;
+}
+.coach-title {
+  margin: 0 0 6px;
+  font-size: var(--fs-16);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+.coach-text {
+  margin: 0;
+  color: var(--fg-2);
+  font-size: var(--fs-13);
+  line-height: 1.5;
+}
+.coach-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+}
+.coach-count {
+  color: var(--fg-4);
+}
+
+.spot {
+  position: fixed;
+  z-index: 74;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-radius: var(--r-md);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 0 6px rgba(89, 188, 255, 0.25), 0 0 40px 6px rgba(89, 188, 255, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 640ms var(--spring), width 640ms var(--spring), height 640ms var(--spring), opacity 300ms var(--ease-out);
+}
+.spot.is-on {
+  opacity: 1;
+  animation: spot-breathe 2.4s var(--ease-in-out) infinite;
+}
+@keyframes spot-breathe {
+  50% {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 0 9px rgba(89, 188, 255, 0.12), 0 0 50px 10px rgba(89, 188, 255, 0.3);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spot.is-on {
+    animation: none;
+  }
+}
+:root.reduce-motion .spot.is-on {
+  animation: none;
+}

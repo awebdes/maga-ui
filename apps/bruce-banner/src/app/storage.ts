@@ -16,7 +16,20 @@ export interface ProjectMeta {
   updatedAt: number;
 }
 
-let stores: { index: UseStore; docs: UseStore; blobs: UseStore; thumbs: UseStore } | null = null;
+/** a picture someone drew with AI or uploaded: reusable in any banner of this browser */
+export interface ArtMeta {
+  ref: string;
+  w: number;
+  h: number;
+  source: 'ai' | 'upload';
+  at: number;
+  subject?: string;
+}
+
+/** how many of the latest pictures survive clean-up even when no banner uses them */
+const KEEP_ART = 40;
+
+let stores: { index: UseStore; docs: UseStore; blobs: UseStore; thumbs: UseStore; art: UseStore } | null = null;
 let available = typeof indexedDB !== 'undefined';
 
 function db() {
@@ -25,6 +38,7 @@ function db() {
     docs: createStore('bruce-banner-docs', 'kv'),
     blobs: createStore('bruce-banner-blobs', 'kv'),
     thumbs: createStore('bruce-banner-thumbs', 'kv'),
+    art: createStore('bruce-banner-art', 'kv'),
   };
   return stores;
 }
@@ -88,14 +102,35 @@ async function sha256(blob: Blob) {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Stores an image once by content and returns its ref (`blob:<sha256>`), drawable right away. */
-export async function putImage(blob: Blob): Promise<string> {
+/**
+ * Stores an image once by content and returns its ref (`blob:<sha256>`), drawable right away.
+ * With `art`, it also joins «Мои картинки».
+ */
+export async function putImage(blob: Blob, art?: Omit<ArtMeta, 'ref' | 'at'>): Promise<string> {
   const ref = `blob:${await sha256(blob)}`;
   registerBlob(ref, blob);
   await safe(async () => {
     if (!(await get(ref, db().blobs))) await set(ref, blob, db().blobs);
+    if (art) await set(ref, { ...art, ref, at: Date.now() } satisfies ArtMeta, db().art);
   }, undefined);
+  if (art) window.dispatchEvent(new CustomEvent('bb:art'));
   return ref;
+}
+
+/** «Мои картинки», newest first, drawable. */
+export async function listArt(limit = 24): Promise<ArtMeta[]> {
+  const all = (await safe(() => entries<string, ArtMeta>(db().art), [])).map(([, m]) => m).sort((a, b) => b.at - a.at);
+  const out: ArtMeta[] = [];
+  for (const m of all) {
+    if (out.length >= limit) break;
+    if (!hasBlob(m.ref)) {
+      const blob = await getImageBlob(m.ref);
+      if (!blob) continue;
+      registerBlob(m.ref, blob);
+    }
+    out.push(m);
+  }
+  return out;
 }
 
 export async function getImageBlob(ref: string): Promise<Blob | null> {
@@ -113,11 +148,14 @@ async function registerDocBlobs(doc: BannerDoc) {
   }
 }
 
-/** Deletes stored images no saved banner uses. */
+/** Deletes stored images no saved banner uses, except the latest of «Мои картинки». */
 export async function gcBlobs() {
   await safe(async () => {
     const used = new Set<string>();
     for (const [, doc] of await entries<string, BannerDoc>(db().docs)) docBlobRefs(doc).forEach((r) => used.add(r));
+    const art = (await entries<string, ArtMeta>(db().art)).map(([, m]) => m).sort((a, b) => b.at - a.at);
+    art.slice(0, KEEP_ART).forEach((m) => used.add(m.ref));
+    for (const m of art.slice(KEEP_ART)) if (!used.has(m.ref)) await del(m.ref, db().art);
     for (const k of await keys<string>(db().blobs)) if (!used.has(k)) await del(k, db().blobs);
   }, undefined);
 }

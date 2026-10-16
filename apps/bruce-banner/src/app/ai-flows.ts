@@ -402,7 +402,7 @@ export class ArtGenerator {
     const id = this.layerId;
     const keyed = this.keyed;
     if (!id || !keyed) return;
-    const ref = await putImage(keyed.blob);
+    const ref = await putImage(keyed.blob, { w: keyed.width, h: keyed.height, source: 'ai', subject: this.prompt.value });
     const old = this.editor.doc && findLayer(this.editor.doc, id);
     // the drawing is cropped tight: it takes the place the old picture visibly filled
     const visible = old?.kind === 'image' ? opaqueBox(old.src) : undefined;

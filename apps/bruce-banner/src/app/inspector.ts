@@ -33,12 +33,16 @@ import { assetUrl } from '../render/images';
 import { initFs } from '../ui/kit/components';
 import { initDrop } from '../ui/kit/prompt';
 import { CopyFields, type SlotSpec } from './copy-fields';
+import type { ArtMeta } from './storage';
 import { h, icon } from './dom';
 import type { Editor } from './state';
 
 export interface InspectorHooks {
   openLayouts(anchor: HTMLElement): void;
   uploadImage(layerId: string, file: File): void;
+  /** «Мои картинки»: what was drawn or uploaded before, in any banner */
+  listArt(): Promise<ArtMeta[]>;
+  useArt(layerId: string, art: ArtMeta): void;
   generateImage(layerId: string, anchor: HTMLElement): void;
   aiText(op: 'shorter' | 'rephrase' | 'translate', layer: Layer, anchor: HTMLElement): void;
   aiEnabled(): boolean;
@@ -71,6 +75,7 @@ export class Inspector {
   private body: HTMLElement;
   private title: HTMLElement;
   private syncs: (() => void)[] = [];
+  private cleanups: (() => void)[] = [];
   private builtFor = '';
 
   constructor(
@@ -93,6 +98,8 @@ export class Inspector {
     }
     this.builtFor = key;
     this.syncs = [];
+    this.cleanups.forEach((fn) => fn());
+    this.cleanups = [];
     this.body.replaceChildren();
     if (!doc) return;
     if (!sel) this.buildBanner();
@@ -174,7 +181,13 @@ export class Inspector {
         aiBtn('Иначе', () => this.hooks.aiText('rephrase', l, tools)),
         aiBtn('Перевести', () => this.hooks.aiText('translate', l, tools), 'С основного языка на остальные'),
       );
-      parts.push(section('Текст', fields.el, ai ? tools : null));
+      const hint = h('p', { class: 'insp-hint', role: 'status' });
+      this.syncs.push(() => {
+        const issue = this.editor.issues().find((i) => i.code === 'contrast' && i.layerId === l.id);
+        hint.hidden = !issue;
+        hint.textContent = issue ? `${issue.message}: выберите цвет ниже или другую тему` : '';
+      });
+      parts.push(section('Текст', fields.el, hint, ai ? tools : null));
     }
 
     const pickKind = PICK[l.kind];
@@ -243,18 +256,40 @@ export class Inspector {
       b.addEventListener('click', () => this.editor.change((d) => setAsset(d, l.id, a.id)));
       grid.append(b);
     }
-    const custom = h('div', { class: 'asset-custom' });
-    grid.append(custom);
-    this.syncs.push(() => {
+    // «Мои картинки»: drawings and uploads from any banner of this browser
+    const mine = h('div', { class: `asset-grid kind-${kind} asset-mine`, role: 'radiogroup', 'aria-label': 'Мои картинки' });
+    const mineSection = h('div', { class: 'asset-mine-wrap', hidden: true }, h('div', { class: 'asset-sub caps', text: 'Мои картинки' }), mine);
+    const currentRef = () => {
       const cur = this.layer(l.id);
-      const ref = cur ? ('src' in cur ? cur.src : cur.kind === 'pill' ? cur.icon : '') : '';
-      for (const b of grid.querySelectorAll<HTMLElement>('.asset')) b.setAttribute('aria-checked', String(b.dataset.ref === ref));
-      custom.replaceChildren();
-      if (ref.startsWith('blob:')) {
-        const url = assetUrl(ref);
-        custom.append(h('div', { class: 'asset is-own', 'aria-checked': 'true', 'data-tip': 'Ваша картинка' }, url ? h('img', { src: url, alt: 'Ваша картинка' }) : null));
-      }
-    });
+      return cur ? ('src' in cur ? cur.src : cur.kind === 'pill' ? cur.icon : '') : '';
+    };
+    const fillMine = async () => {
+      if (kind !== 'illustration') return;
+      const art = await this.hooks.listArt();
+      // the layer's own picture shows even if it came from a colleague's file
+      const own = currentRef();
+      if (own.startsWith('blob:') && !art.some((a) => a.ref === own)) art.unshift({ ref: own, w: 1, h: 1, source: 'upload', at: 0 });
+      mine.replaceChildren(
+        ...art.map((a) => {
+          const url = assetUrl(a.ref);
+          const label = a.subject ? `AI: ${a.subject}` : a.source === 'ai' ? 'Нарисовано AI' : 'Загружено';
+          const b = h('button', { class: 'asset is-own', role: 'radio', 'data-ref': a.ref, 'aria-label': label, 'data-tip': label }, url ? h('img', { src: url, alt: '', draggable: 'false' }) : null);
+          if (a.at) b.addEventListener('click', () => this.hooks.useArt(l.id, a));
+          return b;
+        }),
+      );
+      mineSection.hidden = art.length === 0;
+      mark();
+    };
+    const mark = () => {
+      const ref = currentRef();
+      for (const b of [...grid.querySelectorAll<HTMLElement>('.asset'), ...mine.querySelectorAll<HTMLElement>('.asset')]) b.setAttribute('aria-checked', String(b.dataset.ref === ref));
+    };
+    void fillMine();
+    const onArt = () => void fillMine();
+    window.addEventListener('bb:art', onArt);
+    this.cleanups.push(() => window.removeEventListener('bb:art', onArt));
+    this.syncs.push(mark);
     const tools = h('div', { class: 'asset-tools' });
     if (kind === 'illustration') {
       const drop = h('button', { class: 'cell ghost drop', 'aria-label': 'Загрузить картинку' }, icon('i-upload'), h('span', { text: 'Своя' }));
@@ -267,7 +302,7 @@ export class Inspector {
         tools.append(gen);
       }
     }
-    return section(kind === 'card' ? 'Карта' : kind === 'logo' ? 'Логотип' : 'Иллюстрация', grid, tools.childElementCount ? tools : null);
+    return section(kind === 'card' ? 'Карта' : kind === 'logo' ? 'Логотип' : 'Иллюстрация', grid, mineSection, tools.childElementCount ? tools : null);
   }
 
   private colorRow(l: Layer): HTMLElement | null {
