@@ -26,14 +26,29 @@
     <symbol id="i-cube" viewBox="0 0 24 24"><path d="M12 3.5l7.5 4.2v8.6L12 20.5l-7.5-4.2V7.7z"/><path d="M4.5 7.7L12 12l7.5-4.3M12 12v8.5"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
     <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M3.5 16l4.5-4.5 4 4 2.5-2.5 6 6"/><circle cx="15.5" cy="9.5" r="1.5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M9.5 7V5.5h5V7"/><path d="M7 7l.8 11.2A1.9 1.9 0 0 0 9.7 20h4.6a1.9 1.9 0 0 0 1.9-1.8L17 7"/></symbol>
+    <symbol id="i-duplicate" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 5.5V5A1.5 1.5 0 0 0 14 3.5H6A2.5 2.5 0 0 0 3.5 6v8A1.5 1.5 0 0 0 5 15.5h.5"/></symbol>
+    <symbol id="i-group" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5" stroke-dasharray="2.6 2.6"/><rect x="7.5" y="7.5" width="5" height="5" rx="1.2"/><circle cx="14.5" cy="14.5" r="2.5"/></symbol>
+    <symbol id="i-ungroup" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="2"/><circle cx="16.5" cy="16.5" r="4"/><path d="M15 5h4v4M9 19H5v-4" stroke-dasharray="2 2"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M4 4l16 16"/><path d="M10 6a9.6 9.6 0 0 1 2-.5C18 5.5 21.5 12 21.5 12a17 17 0 0 1-2.7 3.4M6.2 7.5A16 16 0 0 0 2.5 12S6 18.5 12 18.5a9 9 0 0 0 4-.9"/><path d="M9.9 9.9a2.8 2.8 0 0 0 4.2 4.2"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><ellipse cx="12" cy="10" rx="7.5" ry="4.5"/><path d="M4.5 10v4c0 2.5 3.4 4.5 7.5 4.5s7.5-2 7.5-4.5v-4"/></symbol>
+    <symbol id="i-badge" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8l1.2 2.5 2.8.4-2 2 .5 2.8-2.5-1.3-2.5 1.3.5-2.8-2-2 2.8-.4z"/></symbol>
+    <symbol id="i-tile" viewBox="0 0 24 24"><rect x="4.5" y="4.5" width="15" height="15" rx="4"/></symbol>
+    <symbol id="i-plate" viewBox="0 0 24 24"><path d="M3.5 15.5l5-6.5h11l-5 6.5z"/><path d="M3.5 15.5v1.5h11l5-6.5V9"/></symbol>
+    <symbol id="i-pill" viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="5"/><circle cx="8" cy="12" r="3"/></symbol>
+    <symbol id="i-percent" viewBox="0 0 24 24"><path d="M18 6L6 18"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 4l8.5 4.5L12 13 3.5 8.5z"/><path d="M3.5 12.5L12 17l8.5-4.5"/><path d="M3.5 16.5L12 21l8.5-4.5"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4.5 9h14l-3.5-3.5"/><path d="M19.5 15h-14l3.5 3.5"/></symbol>
   </defs>
 </svg>
 
 <div class="app" id="app">
   <div class="stage" aria-hidden="true"></div>
-  <canvas class="viewport" id="viewport" tabindex="0" aria-label="3D preview. Drag to orbit, double-click to reset the view."></canvas>
+  <canvas class="viewport" id="viewport" tabindex="0" aria-label="3D preview. Click an object to select it, drag to move it. Drag empty space to orbit, double-click it to reset the view."></canvas>
+  <svg class="overlay" id="overlay" aria-hidden="true"></svg>
   <div class="juice" aria-hidden="true"><i class="b2"></i><i class="b3"></i><i class="b1"></i></div>
-  <div class="drop-hint" id="drop-hint" aria-hidden="true"><span><svg class="i i-lg"><use href="#i-upload"/></svg>Drop an SVG to make it 3D</span></div>
+  <div class="drop-hint" id="drop-hint" aria-hidden="true"><span><svg class="i i-lg"><use href="#i-upload"/></svg>Drop an SVG to add it</span></div>
   <div class="no-gpu" id="no-gpu" hidden>
     <strong>WebGPU is off in this browser</strong>
     <span>The preview works, path-traced export needs WebGPU. Use Chrome 121+ or Safari 26+.</span>
@@ -53,11 +68,12 @@
         <div class="menu below" id="brand-menu" style="width:264px">
           <div class="menu-label caps">Examples</div>
           <button class="menu-item" role="menuitemradio" data-example="safe" aria-checked="true"><svg class="i"><use href="#i-cube"/></svg><span>Safe<span class="sub">Hand-built reference</span></span><svg class="i i-sm check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
-          <button class="menu-item" role="menuitemradio" data-example="house" aria-checked="false"><svg class="i"><use href="#i-cube"/></svg><span>House<span class="sub">Glyph, % coin, person</span></span><svg class="i i-sm check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
-          <button class="menu-item" role="menuitemradio" data-example="pin" aria-checked="false"><svg class="i"><use href="#i-cube"/></svg><span>Pin<span class="sub">Glyph, plate, tile, toggle</span></span><svg class="i i-sm check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+          <button class="menu-item" role="menuitemradio" data-example="house" aria-checked="false"><svg class="i"><use href="#i-cube"/></svg><span>House<span class="sub">Icon, % coin, person</span></span><svg class="i i-sm check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+          <button class="menu-item" role="menuitemradio" data-example="pin" aria-checked="false"><svg class="i"><use href="#i-cube"/></svg><span>Pin<span class="sub">Icon, plate, tile, toggle</span></span><svg class="i i-sm check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
           <div class="menu-sep"></div>
-          <button class="menu-item" data-action="shapes"><svg class="i"><use href="#i-shapes"/></svg><span>New from a shape</span><span class="kbd">S</span></button>
-          <button class="menu-item" data-action="open"><svg class="i"><use href="#i-upload"/></svg><span>Open SVG…</span><span class="kbd">O</span></button>
+          <button class="menu-item" data-action="blank"><svg class="i"><use href="#i-plus"/></svg><span>Blank scene<span class="sub">Add objects one by one</span></span></button>
+          <button class="menu-item" data-action="shapes"><svg class="i"><use href="#i-shapes"/></svg><span>New from an icon…</span></button>
+          <button class="menu-item" data-action="open"><svg class="i"><use href="#i-upload"/></svg><span>New from SVG…</span></button>
         </div>
       </div>
     </div>
@@ -115,35 +131,73 @@
       </div>
     </div>
 
-    <!-- left middle: shape -->
+    <!-- left middle: layers -->
     <div class="float lm">
-      <div class="island glass shape-island" style="position:relative">
-        <button class="cell clear glyph-btn" id="glyph-btn" aria-expanded="false" aria-controls="glyph-pop" data-tip="Shape" data-kbd="S" data-tip-side="right" aria-label="Choose a shape"><span class="glyph-preview" id="glyph-preview"></span></button>
-        <button class="cell clear icon-btn" id="open-btn" data-tip="Open SVG" data-kbd="O" data-tip-side="right" aria-label="Open SVG"><svg class="i"><use href="#i-upload"/></svg></button>
+      <section class="island glass layers" id="layers" aria-label="Objects">
+        <div class="layers-head">
+          <span class="caps">Objects</span>
+          <span class="layers-count mono" id="layers-count"></span>
+          <button class="cell clear icon-btn sm" id="add-btn" data-menu="add-menu" data-tip="Add object" data-kbd="A" data-tip-side="right" aria-label="Add object"><svg class="i"><use href="#i-plus"/></svg></button>
+        </div>
+        <div class="layers-list" id="layers-list" role="tree" aria-label="Objects" aria-multiselectable="true"></div>
+        <div class="menu add-menu" id="add-menu" style="width:232px">
+          <button class="menu-item" data-add="icon"><svg class="i"><use href="#i-shapes"/></svg><span>Icon…</span><span class="kbd">S</span></button>
+          <button class="menu-item" data-add="svg"><svg class="i"><use href="#i-upload"/></svg><span>Your SVG…</span><span class="kbd">O</span></button>
+          <div class="menu-sep"></div>
+          <div class="menu-label caps">Shapes</div>
+          <button class="menu-item" data-add="coin"><svg class="i"><use href="#i-coin"/></svg><span>Coin</span></button>
+          <button class="menu-item" data-add="badge"><svg class="i"><use href="#i-badge"/></svg><span>Badge<span class="sub">An icon on a coin</span></span></button>
+          <button class="menu-item" data-add="tile"><svg class="i"><use href="#i-tile"/></svg><span>Tile</span></button>
+          <button class="menu-item" data-add="pill"><svg class="i"><use href="#i-pill"/></svg><span>Toggle</span></button>
+          <button class="menu-item" data-add="plate"><svg class="i"><use href="#i-plate"/></svg><span>Plate</span></button>
+          <button class="menu-item" data-add="percent"><svg class="i"><use href="#i-percent"/></svg><span>Percent sign</span></button>
+        </div>
         <input type="file" id="svg-file" accept=".svg,image/svg+xml" hidden>
-        <section class="menu glyph-pop" id="glyph-pop" role="dialog" aria-label="Shapes">
-          <label class="glyph-search"><svg class="i i-sm"><use href="#i-search"/></svg><input class="field" id="glyph-search" type="search" placeholder="Search 1,512 icons" autocomplete="off" spellcheck="false" aria-label="Search icons"></label>
-          <div class="glyph-head caps" id="glyph-head">Banking</div>
-          <div class="glyph-grid" id="glyph-grid" role="listbox" aria-label="Icons"></div>
-          <div class="glyph-foot"><span class="caps">Phosphor · fill</span><button class="cell sm ghost" id="glyph-open"><svg class="i i-sm"><use href="#i-upload"/></svg>Your SVG</button></div>
-        </section>
-      </div>
+      </section>
     </div>
 
-    <!-- bottom center: form dock -->
+    <section class="menu glyph-pop" id="glyph-pop" role="dialog" aria-label="Icons">
+      <div class="glyph-mode caps" id="glyph-mode">Add an icon</div>
+      <label class="glyph-search"><svg class="i i-sm"><use href="#i-search"/></svg><input class="field" id="glyph-search" type="search" placeholder="Search 1,512 icons" autocomplete="off" spellcheck="false" aria-label="Search icons"></label>
+      <div class="glyph-head caps" id="glyph-head">Banking</div>
+      <div class="glyph-grid" id="glyph-grid" role="listbox" aria-label="Icons"></div>
+      <div class="glyph-foot"><span class="caps">Phosphor · fill</span><button class="cell sm ghost" id="glyph-open"><svg class="i i-sm"><use href="#i-upload"/></svg>Your SVG</button></div>
+    </section>
+
+    <!-- bottom center: selection bar over the context dock -->
     <div class="float bc">
+      <div class="island glass selbar" id="selbar" aria-label="Selection" hidden>
+        <button class="cell clear sel-chip" id="sel-chip" aria-label="Selection"><span class="sel-icon" id="sel-icon" aria-hidden="true"></span><span class="sel-name" id="sel-name"></span><svg class="i i-sm sel-swap" aria-hidden="true"><use href="#i-swap"/></svg></button>
+        <div class="fs split" id="fs-size" data-label="Size" data-min="5" data-max="300" data-value="100" data-default="100" data-format="pct"></div>
+        <div class="fs split bipolar" id="fs-tilt" data-label="Tilt" data-min="-180" data-max="180" data-value="0" data-default="0" data-format="deg"></div>
+        <div class="fs split bipolar" id="fs-turn" data-label="Turn" data-min="-180" data-max="180" data-value="0" data-default="0" data-format="deg"></div>
+        <div class="fs split bipolar" id="fs-fwd" data-label="Forward" data-min="-1.5" data-max="1.5" data-step="0.01" data-value="0" data-default="0"></div>
+        <span class="bar-sep" aria-hidden="true"></span>
+        <button class="cell clear icon-btn" id="sel-dup" data-tip="Duplicate" data-kbd="⌘D" aria-label="Duplicate"><svg class="i"><use href="#i-duplicate"/></svg></button>
+        <button class="cell clear icon-btn" id="sel-group" data-tip="Group" data-kbd="⌘G" aria-label="Group"><svg class="i"><use href="#i-group"/></svg></button>
+        <button class="cell clear icon-btn" id="sel-ungroup" data-tip="Ungroup" data-kbd="⇧⌘G" aria-label="Ungroup" hidden><svg class="i"><use href="#i-ungroup"/></svg></button>
+        <button class="cell clear icon-btn danger" id="sel-del" data-tip="Delete" data-kbd="⌫" aria-label="Delete"><svg class="i"><use href="#i-trash"/></svg></button>
+      </div>
       <div class="island glass dock" id="dock">
-        <div class="seg lg" id="form-seg" aria-label="Form">
-          <button data-value="extrude">Extrude</button>
-          <button data-value="soft" aria-checked="true">Soft</button>
-          <button data-value="inflate">Inflate</button>
-          <button data-value="badge">Badge</button>
+        <div class="dock-part dock-hint" id="dock-hint">
+          <span class="hint-text" id="dock-hint-text">Click an object to edit it</span>
+          <button class="cell sm" id="dock-add"><svg class="i i-sm"><use href="#i-plus"/></svg>Add object</button>
         </div>
-        <div class="fs" id="fs-depth" data-label="Depth" data-min="4" data-max="60" data-value="26" data-default="26" data-format="pct"></div>
-        <div class="fs" id="fs-round" data-label="Roundness" data-min="0" data-max="100" data-value="100" data-default="100" data-format="pct"></div>
-        <div class="fs" id="fs-puff" data-label="Puff" data-min="0" data-max="100" data-value="70" data-default="70" data-format="pct"></div>
+        <div class="dock-part" id="dock-form" hidden>
+          <div class="seg lg" id="form-seg" aria-label="Form">
+            <button data-value="extrude">Extrude</button>
+            <button data-value="soft" aria-checked="true">Soft</button>
+            <button data-value="inflate">Inflate</button>
+            <button data-value="badge" data-tip="The icon on a coin">Badge</button>
+          </div>
+        </div>
+        <div class="dock-part" id="dock-sliders" hidden>
+          <div class="fs" id="fs-depth" data-label="Depth" data-min="4" data-max="60" data-value="26" data-default="26" data-format="pct"></div>
+          <div class="fs" id="fs-round" data-label="Roundness" data-min="0" data-max="100" data-value="100" data-default="100" data-format="pct"></div>
+          <div class="fs" id="fs-puff" data-label="Puff" data-min="0" data-max="100" data-value="70" data-default="70" data-format="pct"></div>
+        </div>
+        <div class="dock-part dock-note" id="dock-note" hidden><span id="dock-note-text"></span></div>
         <span class="bake" id="bake" role="status" aria-label="Mesh ready"><i></i></span>
-        <div class="dock-lock" id="dock-lock" hidden><span>Hand-built example.</span><button class="cell sm" id="dock-pick">Pick a shape</button></div>
       </div>
     </div>
 
@@ -157,9 +211,9 @@
               <button class="cell clear icon-btn panel-close" data-close="mat-panels" aria-label="Close materials"><svg class="i"><use href="#i-close"/></svg></button>
             </div>
             <div class="panel-body">
-              <div class="seg part-seg" id="part-seg" aria-label="Part">
-                <button data-value="body" aria-checked="true">Body</button><button data-value="accent">Accent</button><button data-value="coin">Coin</button>
-              </div>
+              <div class="mat-scope caps" id="mat-scope"></div>
+              <div class="slot-wrap" id="slot-wrap"></div>
+              <div class="mat-empty" id="mat-empty" hidden>Select an object to change its material.</div>
               <div class="swatch-grid" id="swatches" role="radiogroup" aria-label="Material"></div>
             </div>
           </section>

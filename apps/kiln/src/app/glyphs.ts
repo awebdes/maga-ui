@@ -29,6 +29,10 @@ const ORDER = [
 const byName = new Map(Object.entries(SHORT).map(([p, svg]) => [nameOf(p), svg]));
 export const SHORTLIST: Glyph[] = ORDER.filter((n) => byName.has(n)).map((name) => ({ name, svg: byName.get(name)! }));
 
+export function shortGlyphOrNull(name: string): string | null {
+  return byName.get(name) ?? null;
+}
+
 export function shortGlyph(name: string): Glyph {
   const svg = byName.get(name);
   if (!svg) throw new Error(`Unknown glyph ${name}`);

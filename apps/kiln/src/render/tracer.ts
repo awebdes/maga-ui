@@ -42,6 +42,8 @@ const nextTask = () => new Promise<void>((r) => setTimeout(r, 0));
 export interface SceneChanges {
   /** geometry added, removed or replaced: rebuild the BVH */
   geometry?: boolean;
+  /** objects moved or were hidden: refit, no rebuild */
+  transforms?: boolean;
   materials?: boolean;
   lights?: boolean;
   environment?: boolean;
@@ -54,7 +56,11 @@ export interface SceneChanges {
  */
 export class Tracer {
   readonly pt: WebGPUPathTracer;
+  /** how the scene reached the tracer: e2e checks that moves refit instead of rebuilding */
+  readonly stats = { setScene: 0, updateTransforms: 0, updateMaterials: 0 };
   private busy = false;
+  /** viewport samples submitted and not finished on the GPU */
+  private inFlight = 0;
   private sceneSet: THREE.Scene | null = null;
   private cameraSet: THREE.Camera | null = null;
   private pending: SceneChanges = { geometry: true };
@@ -83,6 +89,7 @@ export class Tracer {
     const p = this.pending;
     if (p.geometry || this.sceneSet !== scene) {
       t.setScene(scene, camera);
+      this.stats.setScene++;
       this.sceneSet = scene;
       this.cameraSet = camera;
     } else {
@@ -90,7 +97,14 @@ export class Tracer {
         t.setCamera(camera);
         this.cameraSet = camera;
       } else if (p.camera) t.updateCamera();
-      if (p.materials) t.updateMaterials();
+      if (p.transforms) {
+        t.updateTransforms();
+        this.stats.updateTransforms++;
+      }
+      if (p.materials) {
+        t.updateMaterials();
+        this.stats.updateMaterials++;
+      }
       if (p.lights) t.updateLights();
       if (p.environment) t.updateEnvironment();
     }
@@ -108,9 +122,19 @@ export class Tracer {
     t.reset();
   }
 
-  /** One viewport frame: accumulate and present. */
+  /**
+   * One viewport frame: accumulate and present. At most two samples wait on the GPU: a slow GPU
+   * (or SwiftShader) otherwise queues samples faster than it runs them, and the page stops getting
+   * frames for its own UI.
+   */
   stepViewport() {
-    if (!this.busy) this.pt.renderSample();
+    if (this.busy || this.inFlight >= 2) return;
+    this.pt.renderSample();
+    const queue = (this.renderer.backend as unknown as { device?: GPUDevice }).device?.queue;
+    if (!queue) return;
+    this.inFlight++;
+    const done = () => this.inFlight--;
+    queue.onSubmittedWorkDone().then(done, done);
   }
 
   async sampleCount() {

@@ -19,6 +19,17 @@ export default defineConfig({
       },
     },
   },
+  // pre-bundle every three.js user up front: a dependency found mid-session re-bundles three under
+  // a new hash, the page then holds two copies and three-mesh-bvh's instanceof checks fail
+  optimizeDeps: {
+    include: [
+      'three/webgpu',
+      'three-mesh-bvh',
+      'three-gpu-pathtracer/webgpu',
+      'three/examples/jsm/lights/RectAreaLightTexturesLib.js',
+      'three/examples/jsm/geometries/RoundedBoxGeometry.js',
+    ],
+  },
   worker: { format: 'es' },
   test: {
     include: ['tests/unit/**/*.test.ts'],

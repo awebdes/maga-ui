@@ -3,334 +3,215 @@ import '../ui/kit/components.css';
 import '../ui/kit/stage.css';
 import './styles.css';
 import * as THREE from 'three/webgpu';
-import { $, $$, clamp, kit, odo, pop, refreshRim, store, tick, toast, wake, initTips, Spring } from '../ui/kit/core';
-import { initComponents, initFs, initSeg } from '../ui/kit/components';
-import { createRenderer, hasWebGPUBackend, Tracer, type SceneChanges } from '../render/tracer';
-import { Studio } from '../studio/studio';
-import { DEFAULT_RIG, type RigParams } from '../scene/lights';
-import { MATERIAL_LIBRARY, swatchColor, type MaterialSpec } from '../scene/materials';
-import { applyMaterials, defaultMaterials, partsIn, type MaterialSet, type Part } from '../examples/parts';
-import { HOUSE_HERO } from '../examples/house';
-import { PIN_HERO } from '../examples/pin';
+import { $, $$, kit, pop, refreshRim, store, toast, wake, initTips } from '../ui/kit/core';
+import { initComponents, initSeg } from '../ui/kit/components';
 import { sanitizeSvg } from '../shape/svg';
-import { Subject, formDefaults, type FormChoice, type SceneId, type ShapeState } from './subject';
-import { SHORTLIST, loadAllGlyphs, searchGlyphs, shortGlyph, type Glyph } from './glyphs';
+import { GeometryCache, svgRef } from '../doc/geometry';
+import { SceneRuntime, type RuntimeChanges } from '../doc/runtime';
+import { EXAMPLES, glyphDoc } from '../doc/examples';
+import { emptyDoc, setGlyph, topLevel } from '../doc/ops';
+import { findObject, type GlyphRef, type Kind, type SceneDoc } from '../doc/scene';
+import { Editor } from './editor';
+import { Viewport, VIEWS, VIEWPORT_PADDING } from './viewport';
+import { Picker } from './picking';
+import { Overlay } from './overlay';
+import { Manipulator } from './manipulate';
+import { Actions } from './actions';
+import { Layers } from './layers';
+import { Library, type LibraryMode } from './library';
+import { SelBar } from './selbar';
+import { Dock } from './dock';
+import { MaterialPanel } from './material-panel';
+import { LightIsland } from './light';
 import { initExport } from './export';
 
-/* ---------- state ---------- */
-
-const VIEWS: Record<string, { az: number; el: number }> = {
-  'three-quarter-right': { az: 23, el: 4 },
-  front: { az: 0, el: 2 },
-  'three-quarter-left': { az: -23, el: 4 },
-  top: { az: 20, el: 34 },
-};
-const VIEWPORT_PADDING = 0.2;
 const EXPORT_PADDING = 0.12;
-const TRACE_SAMPLES = 64;
-/** viewport trace size as a fraction of the CSS size */
-let traceScale = 0.6;
-/** e2e: hold the viewport tracer so screenshots can grab a frame */
-let tracePaused = false;
+/** the fine mesh follows once edits pause this long, ms */
+const FINAL_DELAY = 700;
 
-const state = {
-  shape: {
-    scene: 'safe' as SceneId,
-    glyph: shortGlyph('vault'),
-    form: 'soft' as FormChoice,
-    ...formDefaults('soft'),
-  } satisfies ShapeState as ShapeState,
-  materials: defaultMaterials() as MaterialSet,
-  part: 'body' as Part,
-  rig: { ...DEFAULT_RIG } as RigParams,
-  view: 'three-quarter-right',
-};
-
-/* ---------- renderer, studio, tracer ---------- */
+/* ---------- core: viewport, document, runtime ---------- */
 
 const app = $('#app')!;
 kit.app = app;
-const canvas = $<HTMLCanvasElement>('#viewport')!;
-const renderer = await createRenderer(canvas);
-const webgpu = hasWebGPUBackend(renderer);
-if (!webgpu) $('#no-gpu')!.hidden = false;
-const studio = new Studio(renderer);
-studio.setCamera({ padding: VIEWPORT_PADDING });
-const tracer = webgpu ? new Tracer(renderer) : null;
+const view = await Viewport.create($<HTMLCanvasElement>('#viewport')!);
+if (!view.webgpu) $('#no-gpu')!.hidden = false;
+const { studio } = view;
 
-const statusEl = $('#status')!;
-const statusText = $('#status-text')!;
-const statusSpp = $('#status-spp')!;
+const geo = new GeometryCache();
+const runtime = new SceneRuntime(geo);
+studio.setContent(runtime.root);
+const editor = new Editor();
+const svgOf = (ref: string) => geo.svgIfKnown(ref);
+
+const overlaySvg = $<SVGSVGElement>('#overlay')!;
+const overlay = new Overlay(overlaySvg, editor, runtime, view);
+const picker = new Picker(view, runtime);
+const manip = new Manipulator(editor, runtime, view, picker, overlay, overlaySvg);
+const actions = new Actions(editor, runtime, view);
+const layers = new Layers(editor, actions, overlay, svgOf);
+const library = new Library();
+const selbar = new SelBar(editor, runtime, view, actions, svgOf);
+const dock = new Dock(editor, view);
+const materials = new MaterialPanel(editor);
+const light = new LightIsland((rig) => {
+  studio.setRig(rig);
+  studio.refreshRig();
+  view.invalidate({ lights: true });
+});
+view.frameHooks.push(() => overlay.update());
+
+/* ---------- document → scene ---------- */
+
 const bakeEl = $('#bake')!;
-let meshing = false;
-const subject = new Subject((busy) => {
-  meshing = busy;
-  bakeEl.classList.toggle('is-busy', busy);
-  bakeEl.setAttribute('aria-label', busy ? 'Building mesh' : 'Mesh ready');
-});
-studio.setContent(subject.root);
-
-/* ---------- viewport loop: raster while things move, path tracing when idle ---------- */
-
-let needsRaster = true;
-let changedAt = performance.now();
-let tracing = false;
-let traceDone = false;
-let lastCount = 0;
-let countPending = false;
-let exporting = false;
-
-function aspect() {
-  return canvas.clientWidth / Math.max(1, canvas.clientHeight);
-}
-
-function invalidate(changes: SceneChanges = {}) {
-  tracer?.invalidate(changes);
-  needsRaster = true;
-  changedAt = performance.now();
-  tracing = false;
-  traceDone = false;
-  lastCount = 0;
-}
-
-function setStatus(mode: 'raster' | 'tracing' | 'done' | 'busy', spp = 0) {
-  statusEl.dataset.state = mode;
-  statusText.textContent = mode === 'busy' ? 'Building mesh' : mode === 'raster' ? 'Preview' : mode === 'tracing' ? 'Tracing' : 'Traced';
-  if (mode === 'tracing' || mode === 'done') odo(statusSpp, `${spp} spp`);
-  else statusSpp.textContent = '';
-}
-
-function resize() {
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-  renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
-  studio.frame(aspect());
-  invalidate({ camera: true, lights: true, environment: true });
-}
-new ResizeObserver(resize).observe(canvas);
-
-const orbitAz = new Spring(VIEWS[state.view].az, { stiffness: 140, damping: 22 });
-const orbitEl = new Spring(VIEWS[state.view].el, { stiffness: 140, damping: 22 });
-
-tick(() => {
-  orbitAz.step(1 / 60);
-  orbitEl.step(1 / 60);
-  const moving = !orbitAz.done || !orbitEl.done;
-  if (moving || studio.cam.az !== orbitAz.value || studio.cam.el !== orbitEl.value) {
-    studio.setCamera({ az: orbitAz.value, el: orbitEl.value });
-    studio.frame(aspect());
-    invalidate({ camera: true, lights: true, environment: true });
-  }
-  if (exporting) return;
-  if (needsRaster) {
-    studio.render();
-    needsRaster = false;
-    setStatus(meshing ? 'busy' : 'raster');
-    return;
-  }
-  if (!tracer || meshing || traceDone || tracePaused || performance.now() - changedAt < 300) return;
-  if (!tracing) {
-    // half the CSS size: converges fast, the fade hides the switch from raster
-    tracer.beginViewport(studio.scene, studio.camera, {
-      width: canvas.clientWidth * traceScale,
-      height: canvas.clientHeight * traceScale,
-      maxSamples: TRACE_SAMPLES,
-    });
-    tracing = true;
-    lastCount = 0;
-    setStatus('tracing', 0);
-  }
-  tracer.stepViewport();
-  if (!countPending) {
-    countPending = true;
-    tracer.sampleCount().then((c) => {
-      countPending = false;
-      if (!tracing) return;
-      lastCount = c.min;
-      if (c.min >= TRACE_SAMPLES) {
-        traceDone = true;
-        setStatus('done', TRACE_SAMPLES);
-      } else setStatus('tracing', Math.max(lastCount, Math.floor(c.avg)));
-    });
-  }
-});
-
-/* ---------- content ---------- */
-
+let loading = false;
 let finalTimer = 0;
-let shapeTimer = 0;
-let finalPending: Promise<void> | null = null;
+let sceneName = 'Safe';
+let exampleView: { az: number; el: number } | null = EXAMPLES[0].view;
 
-function contentChanged() {
-  applyMaterials(subject.root, state.materials);
-  studio.contentChanged();
-  studio.frame(aspect());
-  invalidate({ geometry: true });
-  refreshParts();
-  updateMatButton();
+function applyChanges(ch: RuntimeChanges, glide: boolean) {
+  if (!ch.geometry && !ch.transforms && !ch.materials) return;
+  view.invalidate({ geometry: ch.geometry, transforms: ch.transforms, materials: ch.materials });
+  if (ch.geometry || ch.transforms) view.reframe(glide && !loading);
 }
 
-async function bakeFinal() {
-  if (await subject.update(state.shape, 'final')) contentChanged();
-}
-
-/** Preview mesh now, fine mesh once edits settle. */
-function shapeChanged(delay = 30) {
-  clearTimeout(shapeTimer);
+/** Preview meshes while editing, the fine mesh once edits pause. */
+function scheduleFinal(delay = FINAL_DELAY) {
   clearTimeout(finalTimer);
-  finalPending = null;
-  shapeTimer = window.setTimeout(async () => {
-    try {
-      if (await subject.update(state.shape, 'preview')) contentChanged();
-      if (state.shape.scene === 'safe') return;
-      finalTimer = window.setTimeout(() => {
-        finalPending = bakeFinal().catch((e) => toast('Mesh failed', (e as Error).message, 'error'));
-      }, 700);
-    } catch (e) {
-      toast('Could not build this shape', (e as Error).message, 'error');
+  finalTimer = window.setTimeout(() => {
+    if (editor.inGesture) {
+      scheduleFinal(delay);
+      return;
     }
+    applyChanges(runtime.reconcile(editor.doc, 'final'), true);
   }, delay);
 }
 
+/** Exports never use preview meshes. */
 async function ensureFinal() {
-  if (subject.final) return;
   clearTimeout(finalTimer);
-  clearTimeout(shapeTimer);
-  await (finalPending ?? bakeFinal());
+  for (let i = 0; i < 4 && !runtime.isFinal(editor.doc); i++) {
+    applyChanges(runtime.reconcile(editor.doc, 'final'), false);
+    await runtime.settled();
+  }
+}
+
+runtime.onAsync = (ch) => applyChanges(ch, true);
+runtime.onBusy = (busy) => {
+  view.meshing = busy;
+  bakeEl.classList.toggle('is-busy', busy);
+  bakeEl.setAttribute('aria-label', busy ? 'Building mesh' : 'Mesh ready');
+  // while a new document loads the frame is held: say what is happening anyway
+  if (busy) view.setStatus('busy');
+  view.invalidate({});
+};
+runtime.onError = (m) => toast('Could not build this shape', m, 'error');
+
+function refreshUi() {
+  layers.render();
+  selbar.sync();
+  dock.sync();
+  materials.sync();
+}
+
+editor.subscribe((e) => {
+  if (e.doc) {
+    applyChanges(runtime.reconcile(editor.doc, 'preview'), !e.replaced);
+    scheduleFinal();
+  }
+  refreshUi();
+});
+
+/**
+ * Opens a document. The last frame stays on screen until the new meshes land, then the camera
+ * frames the new scene and swings to its view.
+ */
+async function load(doc: SceneDoc, name: string, angles: { az: number; el: number } | null, jump = false) {
+  loading = true;
+  view.hold = true;
+  sceneName = name;
+  exampleView = angles;
+  $('#scene-name')!.textContent = name;
+  editor.load(doc);
+  await runtime.settled();
+  loading = false;
+  view.hold = false;
+  view.reframe(false);
+  if (angles) {
+    camSeg.set('three-quarter-right', { silent: true });
+    if (jump) view.jumpTo(angles.az, angles.el);
+    else view.orbitTo(angles.az, angles.el);
+  }
 }
 
 /* ---------- examples + brand menu ---------- */
 
-const EXAMPLES: Record<string, { name: string; hero?: { glyph: string; form: FormChoice; depth: number; roundness: number; puff: number }; view: { az: number; el: number } }> = {
-  safe: { name: 'Safe', view: { az: 23, el: 2 } },
-  house: { name: 'House', hero: HOUSE_HERO, view: { az: 24, el: 4 } },
-  pin: { name: 'Pin', hero: PIN_HERO, view: { az: 18, el: 10 } },
-};
-
-function setSceneName(name: string) {
-  $('#scene-name')!.textContent = name;
-}
-
-function openExample(id: string) {
-  const ex = EXAMPLES[id];
-  state.shape.scene = id as SceneId;
-  if (ex.hero) {
-    state.shape.glyph = shortGlyph(ex.hero.glyph);
-    state.shape.form = ex.hero.form;
-    state.shape.depth = ex.hero.depth;
-    state.shape.roundness = ex.hero.roundness;
-    state.shape.puff = ex.hero.puff;
-  }
+const brandMenu = $('#brand-menu')!;
+function markExample(id: string | null) {
   $$('#brand-menu [data-example]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.example === id)));
-  setSceneName(ex.name);
-  syncDock();
-  orbitTo(ex.view.az, ex.view.el);
-  camSeg.set('three-quarter-right', { silent: true });
-  shapeChanged(0);
 }
-
+function openExample(id: string) {
+  const ex = EXAMPLES.find((x) => x.id === id) ?? EXAMPLES[0];
+  markExample(ex.id);
+  void load(ex.build(), ex.name, ex.view);
+}
 $$('#brand-menu [data-example]').forEach((b) =>
   b.addEventListener('click', () => {
-    pop.close($('#brand-menu')!);
+    pop.close(brandMenu);
     openExample(b.dataset.example!);
   }),
 );
+$('#brand-menu [data-action="blank"]')!.addEventListener('click', () => {
+  pop.close(brandMenu);
+  markExample(null);
+  void load(emptyDoc(), 'Untitled', null);
+});
 $('#brand-menu [data-action="shapes"]')!.addEventListener('click', () => {
-  pop.close($('#brand-menu')!);
-  openGlyphs();
+  pop.close(brandMenu);
+  library.open('new', $('#brand-btn')!);
 });
 $('#brand-menu [data-action="open"]')!.addEventListener('click', () => {
-  pop.close($('#brand-menu')!);
-  fileInput.click();
+  pop.close(brandMenu);
+  openFile('new');
 });
 
-/* ---------- shape library ---------- */
+/* ---------- icons and SVG files ---------- */
 
-const glyphBtn = $<HTMLButtonElement>('#glyph-btn')!;
-const glyphPop = $('#glyph-pop')!;
-const glyphGrid = $('#glyph-grid')!;
-const glyphHead = $('#glyph-head')!;
-const glyphSearch = $<HTMLInputElement>('#glyph-search')!;
 const fileInput = $<HTMLInputElement>('#svg-file')!;
+let fileMode: LibraryMode = 'add';
 
-function glyphIcon(svg: string) {
-  // our own sanitizer: icons come from the package, uploads are sanitized before they get here
-  const tpl = document.createElement('template');
-  tpl.innerHTML = svg.trim();
-  const el = tpl.content.firstElementChild as SVGElement | null;
-  el?.setAttribute('aria-hidden', 'true');
-  return el;
+function iconTargets() {
+  return topLevel(editor.doc, editor.selection).filter((id) => {
+    const o = findObject(editor.doc, id);
+    return o?.kind === 'glyph' || o?.kind === 'badge';
+  });
 }
 
-function renderGlyphs(list: Glyph[], head: string) {
-  glyphHead.textContent = head;
-  glyphGrid.textContent = '';
-  if (!list.length) {
-    const empty = document.createElement('div');
-    empty.className = 'glyph-empty';
-    empty.textContent = 'Nothing found. Try “card”, “coin” or “home”.';
-    glyphGrid.appendChild(empty);
-    return;
-  }
-  for (const g of list) {
-    const b = document.createElement('button');
-    b.className = 'glyph-cell';
-    b.setAttribute('role', 'option');
-    b.setAttribute('aria-selected', String(g.name === state.shape.glyph.name));
-    b.setAttribute('aria-label', g.name.replace(/-/g, ' '));
-    b.dataset.tip = g.name.replace(/-/g, ' ');
-    const icon = glyphIcon(g.svg);
-    if (icon) b.appendChild(icon);
-    b.addEventListener('click', () => pickGlyph(g));
-    glyphGrid.appendChild(b);
+/** An icon picked or uploaded, used in the mode it was asked for. */
+function usePicked(glyph: GlyphRef, mode: LibraryMode) {
+  if (mode === 'add') actions.addGlyph(glyph);
+  else if (mode === 'replace') {
+    const ids = iconTargets();
+    if (!ids.length) actions.addGlyph(glyph);
+    else editor.change((d) => ids.forEach((id) => setGlyph(d, id, glyph)));
+  } else {
+    markExample(null);
+    void load(glyphDoc(glyph), glyph.name.replace(/-/g, ' '), VIEWS['three-quarter-right']);
   }
 }
 
-function updateGlyphPreview() {
-  const p = $('#glyph-preview')!;
-  p.textContent = '';
-  const icon = glyphIcon(state.shape.glyph.svg);
-  if (icon) p.appendChild(icon);
+library.onPick = (g, mode) => {
+  const ref = `phosphor:${g.name}`;
+  geo.register(ref, g.svg);
+  usePicked({ name: g.name, ref }, mode);
+};
+library.onUpload = (mode) => openFile(mode);
+
+function openFile(mode: LibraryMode) {
+  fileMode = mode;
+  fileInput.click();
 }
 
-function pickGlyph(g: { name: string; svg: string }) {
-  state.shape.glyph = { name: g.name, svg: g.svg };
-  if (state.shape.scene === 'safe') {
-    state.shape.scene = 'glyph';
-    $$('#brand-menu [data-example]').forEach((b) => b.setAttribute('aria-checked', 'false'));
-  }
-  if (state.shape.scene === 'glyph') setSceneName(g.name.replace(/-/g, ' '));
-  $$('.glyph-cell', glyphGrid).forEach((c) => c.setAttribute('aria-selected', String(c.getAttribute('aria-label') === g.name.replace(/-/g, ' '))));
-  updateGlyphPreview();
-  syncDock();
-  shapeChanged(0);
-}
-
-function openGlyphs() {
-  if (!pop.isOpen(glyphPop)) pop.open(glyphPop, glyphBtn);
-  setTimeout(() => glyphSearch.focus(), 60);
-}
-glyphBtn.addEventListener('click', () => {
-  pop.toggle(glyphPop, glyphBtn);
-  if (pop.isOpen(glyphPop)) setTimeout(() => glyphSearch.focus(), 60);
-});
-renderGlyphs(SHORTLIST, 'Banking');
-
-let searchSeq = 0;
-glyphSearch.addEventListener('input', async () => {
-  const q = glyphSearch.value;
-  const seq = ++searchSeq;
-  if (!q.trim()) {
-    renderGlyphs(SHORTLIST, 'Banking');
-    return;
-  }
-  glyphHead.textContent = 'Searching…';
-  const all = await loadAllGlyphs();
-  if (seq !== searchSeq) return;
-  const found = searchGlyphs(all, q, 120);
-  renderGlyphs(found, found.length ? `${found.length === 120 ? '120+' : found.length} icons` : 'No icons');
-});
-
-async function loadSvgFile(file: File) {
+async function loadSvgFile(file: File, mode: LibraryMode) {
   if (!/\.svg$/i.test(file.name) && file.type !== 'image/svg+xml') {
     toast('That file is not an SVG', file.name, 'error');
     return;
@@ -341,22 +222,33 @@ async function loadSvgFile(file: File) {
   }
   try {
     const svg = sanitizeSvg(await file.text());
-    pop.close(glyphPop);
-    pickGlyph({ name: file.name.replace(/\.svg$/i, ''), svg });
-    toast('Shape loaded', file.name);
+    const ref = await svgRef(svg);
+    geo.register(ref, svg);
+    usePicked({ name: file.name.replace(/\.svg$/i, ''), ref }, mode);
+    toast(mode === 'add' ? 'Shape added' : 'Shape loaded', file.name);
   } catch (e) {
     toast('Could not read this SVG', (e as Error).message, 'error');
   }
 }
-$('#open-btn')!.addEventListener('click', () => fileInput.click());
-$('#glyph-open')!.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', () => {
   const f = fileInput.files?.[0];
-  if (f) loadSvgFile(f);
+  if (f) void loadSvgFile(f, fileMode);
   fileInput.value = '';
 });
 
-// drop anywhere
+function openLibrary() {
+  const ids = iconTargets();
+  if (ids.length === 1) {
+    const o = findObject(editor.doc, ids[0]);
+    library.open('replace', $('#sel-chip')!.offsetParent ? $('#sel-chip')! : $('#add-btn')!, o?.glyph?.name ?? null);
+  } else library.open('add', $('#add-btn')!);
+}
+selbar.onReplaceIcon = (anchor) => {
+  const o = findObject(editor.doc, iconTargets()[0] ?? '');
+  library.open('replace', anchor, o?.glyph?.name ?? null);
+};
+
+// drop anywhere: the SVG joins the scene
 let dragDepth = 0;
 window.addEventListener('dragenter', (e) => {
   if (!e.dataTransfer?.types.includes('Files')) return;
@@ -373,308 +265,60 @@ window.addEventListener('drop', (e) => {
   dragDepth = 0;
   app.classList.remove('is-dropping');
   const f = e.dataTransfer?.files?.[0];
-  if (f) loadSvgFile(f);
+  if (f) void loadSvgFile(f, 'add');
 });
 
-/* ---------- form dock ---------- */
+/* ---------- add menu ---------- */
 
-const formSeg = initSeg($('#form-seg')!);
-const fsDepth = initFs($('#fs-depth')!);
-const fsRound = initFs($('#fs-round')!);
-const fsPuff = initFs($('#fs-puff')!);
-const dock = $('#dock')!;
-
-function syncDock() {
-  const s = state.shape;
-  const locked = s.scene === 'safe';
-  dock.classList.toggle('is-locked', locked);
-  $('#dock-lock')!.hidden = !locked;
-  formSeg.set(s.form, { silent: true });
-  fsDepth.set(s.depth, { silent: true });
-  fsRound.set(s.roundness, { silent: true });
-  fsPuff.set(s.puff, { silent: true });
-  $('#fs-puff')!.setAttribute('aria-disabled', String(s.form !== 'inflate'));
-  $('#fs-round')!.setAttribute('aria-disabled', String(s.form === 'inflate'));
-}
-
-$('#form-seg')!.addEventListener('change', () => {
-  const form = formSeg.value as FormChoice;
-  state.shape.form = form;
-  Object.assign(state.shape, formDefaults(form));
-  syncDock();
-  shapeChanged(0);
-});
-for (const [el, key] of [
-  [$('#fs-depth')!, 'depth'],
-  [$('#fs-round')!, 'roundness'],
-  [$('#fs-puff')!, 'puff'],
-] as const) {
-  el.addEventListener('input', (e) => {
-    state.shape[key] = (e as CustomEvent<{ value: number }>).detail.value;
-    shapeChanged(60);
-  });
-}
-$('#dock-pick')!.addEventListener('click', openGlyphs);
-
-/* ---------- materials ---------- */
-
-const matPanels = $('#mat-panels')!;
-const matBtn = $<HTMLButtonElement>('#mat-btn')!;
-const partSeg = initSeg($('#part-seg')!);
-const swatches = $('#swatches')!;
-const colorInput = $<HTMLInputElement>('#mat-color')!;
-const fsRough = initFs($('#fs-rough')!);
-const fsCoat = initFs($('#fs-coat')!);
-const fsMetal = initFs($('#fs-metal')!);
-
-function currentSpec() {
-  return state.materials[state.part];
-}
-
-function renderSwatches() {
-  swatches.textContent = '';
-  const cur = currentSpec();
-  for (const m of MATERIAL_LIBRARY) {
-    const b = document.createElement('button');
-    b.className = 'swatch';
-    b.setAttribute('role', 'radio');
-    b.setAttribute('aria-checked', String(m.id === cur.id));
-    b.setAttribute('aria-label', m.name);
-    const sp = document.createElement('span');
-    sp.className = 'sphere';
-    sp.style.setProperty('--mat', swatchColor(m));
-    if (m.metalness) sp.style.setProperty('--spec', '0.95');
-    const label = document.createElement('span');
-    label.className = 'label';
-    label.textContent = m.name;
-    b.append(sp, label);
-    b.addEventListener('click', () => setMaterial({ ...m }));
-    swatches.appendChild(b);
-  }
-}
-
-function syncProps() {
-  const m = currentSpec();
-  $('#mat-name')!.textContent = m.name;
-  colorInput.value = m.gradient ? m.gradient[1] : m.color;
-  fsRough.set(Math.round(m.roughness * 100), { silent: true });
-  fsCoat.set(Math.round((m.clearcoat ?? 0) * 100), { silent: true });
-  fsMetal.set(Math.round((m.metalness ?? 0) * 100), { silent: true });
-  const glow = m.gradient ? m.gradient[1] : m.color;
-  $$('.panel-head', matPanels).forEach((h) => h.style.setProperty('--panel-glow', glow));
-}
-
-function updateMatButton() {
-  $('#mat-sphere')!.style.setProperty('--mat', swatchColor(state.materials.body));
-}
-
-function materialsChanged() {
-  applyMaterials(subject.root, state.materials);
-  invalidate({ geometry: true });
-  updateMatButton();
-}
-
-function setMaterial(m: MaterialSpec) {
-  state.materials[state.part] = m;
-  renderSwatches();
-  syncProps();
-  materialsChanged();
-}
-
-function editMaterial(patch: Partial<MaterialSpec>) {
-  state.materials[state.part] = { ...currentSpec(), ...patch };
-  materialsChanged();
-}
-
-function refreshParts() {
-  const present = partsIn(subject.root);
-  $$<HTMLButtonElement>('#part-seg > button').forEach((b) => (b.disabled = !present.includes(b.dataset.value as Part)));
-  if (!present.includes(state.part) && present.length) {
-    state.part = present[0];
-    partSeg.set(state.part, { silent: true });
-    renderSwatches();
-    syncProps();
-  }
-}
-
-matBtn.addEventListener('click', () => {
-  const open = !matPanels.classList.contains('is-open');
-  matPanels.classList.toggle('is-open', open);
-  matBtn.setAttribute('aria-expanded', String(open));
-  kit.openCount += open ? 1 : -1;
-  wake();
-  setTimeout(refreshRim, 0);
-});
-$$('[data-close="mat-panels"]').forEach((b) =>
+const addMenu = $('#add-menu')!;
+$$<HTMLElement>('#add-menu [data-add]').forEach((b) =>
   b.addEventListener('click', () => {
-    if (!matPanels.classList.contains('is-open')) return;
-    matPanels.classList.remove('is-open');
-    matBtn.setAttribute('aria-expanded', 'false');
-    kit.openCount = Math.max(0, kit.openCount - 1);
-    matBtn.focus();
+    pop.close(addMenu);
+    const k = b.dataset.add!;
+    if (k === 'icon') library.open('add', $('#add-btn')!);
+    else if (k === 'svg') openFile('add');
+    else if (k === 'badge') actions.add('badge', { glyph: { name: 'star', ref: 'phosphor:star' } });
+    else actions.add(k as Kind);
   }),
 );
-$('#part-seg')!.addEventListener('change', () => {
-  state.part = partSeg.value as Part;
-  renderSwatches();
-  syncProps();
-});
-colorInput.addEventListener('input', () => editMaterial({ color: colorInput.value, gradient: undefined, id: 'custom', name: 'Custom' }));
-$('#fs-rough')!.addEventListener('input', (e) => editMaterial({ roughness: (e as CustomEvent<{ value: number }>).detail.value / 100 }));
-$('#fs-coat')!.addEventListener('input', (e) => editMaterial({ clearcoat: (e as CustomEvent<{ value: number }>).detail.value / 100 }));
-$('#fs-metal')!.addEventListener('input', (e) => editMaterial({ metalness: (e as CustomEvent<{ value: number }>).detail.value / 100 }));
-
-/* ---------- light ---------- */
-
-const orb = $('#orb')!;
-function placeOrbKey() {
-  const x = clamp(state.rig.keyAz / 80, -1, 1);
-  const y = clamp(-state.rig.keyEl / 70, -1, 1);
-  const kx = 50 + x * 38;
-  const ky = 50 + y * 38;
-  orb.style.setProperty('--kx', `${kx}%`);
-  orb.style.setProperty('--ky', `${ky}%`);
-  orb.style.setProperty('--lx', `${50 + x * 30}%`);
-  orb.style.setProperty('--ly', `${50 + y * 30}%`);
-  const h = state.rig.keyAz < -10 ? 'left' : state.rig.keyAz > 10 ? 'right' : 'center';
-  const v = state.rig.keyEl > 15 ? 'upper' : state.rig.keyEl < -5 ? 'lower' : 'middle';
-  orb.setAttribute('aria-valuetext', `${v} ${h}`);
-}
-function rigChanged() {
-  studio.setRig(state.rig);
-  studio.frame(aspect());
-  invalidate({ lights: true });
-  placeOrbKey();
-}
-let orbDrag = false;
-function orbAt(e: PointerEvent) {
-  const r = orb.getBoundingClientRect();
-  const x = clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1);
-  const y = clamp(((e.clientY - r.top) / r.height) * 2 - 1, -1, 1);
-  state.rig.keyAz = Math.round(x * 80);
-  state.rig.keyEl = Math.round(-y * 70);
-  rigChanged();
-}
-orb.addEventListener('pointerdown', (e) => {
-  orbDrag = true;
-  kit.busy = true;
-  orb.setPointerCapture(e.pointerId);
-  orbAt(e);
-});
-orb.addEventListener('pointermove', (e) => orbDrag && orbAt(e));
-const orbEnd = () => {
-  orbDrag = false;
-  kit.busy = false;
-};
-orb.addEventListener('pointerup', orbEnd);
-orb.addEventListener('pointercancel', orbEnd);
-orb.addEventListener('dblclick', () => {
-  state.rig.keyAz = DEFAULT_RIG.keyAz;
-  state.rig.keyEl = DEFAULT_RIG.keyEl;
-  rigChanged();
-});
-orb.addEventListener('keydown', (e) => {
-  const step = e.shiftKey ? 15 : 5;
-  const d = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] } as Record<string, [number, number]>)[e.key];
-  if (!d) return;
-  e.preventDefault();
-  state.rig.keyAz = clamp(state.rig.keyAz + d[0], -80, 80);
-  state.rig.keyEl = clamp(state.rig.keyEl + d[1], -70, 70);
-  rigChanged();
-});
-$('#fs-intensity')!.addEventListener('input', (e) => {
-  state.rig.intensity = (e as CustomEvent<{ value: number }>).detail.value / 100;
-  rigChanged();
-});
-$('#fs-soft')!.addEventListener('input', (e) => {
-  state.rig.softness = (e as CustomEvent<{ value: number }>).detail.value / 100;
-  rigChanged();
-});
-$('#fs-warm')!.addEventListener('input', (e) => {
-  state.rig.warmth = (e as CustomEvent<{ value: number }>).detail.value;
-  rigChanged();
-});
 
 /* ---------- camera ---------- */
 
 const camSeg = initSeg($('#cam-seg')!);
-function orbitTo(az: number, el: number) {
-  orbitAz.set(az);
-  orbitEl.set(el);
-}
 $('#cam-seg')!.addEventListener('change', () => {
-  state.view = camSeg.value;
-  const v = VIEWS[state.view];
-  orbitTo(v.az, v.el);
+  const v = VIEWS[camSeg.value];
+  view.orbitTo(v.az, v.el);
 });
-const orthoBtn = $('#ortho-btn')!;
-orthoBtn.addEventListener('change', (e) => {
+$('#ortho-btn')!.addEventListener('change', (e) => {
   studio.setCamera({ ortho: (e as CustomEvent<{ value: boolean }>).detail.value });
-  studio.frame(aspect());
-  invalidate({ camera: true, lights: true });
+  studio.frame(view.aspect());
+  view.invalidate({ camera: true, lights: true });
 });
 function resetView() {
-  const ex = EXAMPLES[state.shape.scene];
-  const v = ex && state.view === 'three-quarter-right' ? ex.view : VIEWS[state.view];
-  orbitTo(v.az, v.el);
+  const v = exampleView && camSeg.value === 'three-quarter-right' ? exampleView : VIEWS[camSeg.value];
+  view.orbitTo(v.az, v.el);
 }
-
-// orbit by dragging the viewport
-let drag: { x: number; y: number; t: number; vx: number; vy: number } | null = null;
-canvas.addEventListener('pointerdown', (e) => {
-  if (e.button !== 0) return;
-  canvas.setPointerCapture(e.pointerId);
-  drag = { x: e.clientX, y: e.clientY, t: performance.now(), vx: 0, vy: 0 };
-  kit.busy = true;
-});
-canvas.addEventListener('pointermove', (e) => {
-  if (!drag) return;
-  const dx = e.clientX - drag.x;
-  const dy = e.clientY - drag.y;
-  const now = performance.now();
-  const dt = Math.max(1, now - drag.t);
-  drag.vx = (dx / dt) * 1000;
-  drag.vy = (dy / dt) * 1000;
-  drag.x = e.clientX;
-  drag.y = e.clientY;
-  drag.t = now;
-  orbitAz.jump(orbitAz.value - dx * 0.35);
-  orbitEl.jump(clamp(orbitEl.value + dy * 0.3, -15, 70));
-});
-const dragEnd = () => {
-  if (!drag) return;
-  // momentum: glide on with the release velocity
-  const recent = performance.now() - drag.t < 80;
-  if (recent) {
-    orbitAz.set(orbitAz.value - drag.vx * 0.35 * 0.18);
-    orbitEl.set(clamp(orbitEl.value + drag.vy * 0.3 * 0.18, -15, 70));
-  }
-  drag = null;
-  kit.busy = false;
-};
-canvas.addEventListener('pointerup', dragEnd);
-canvas.addEventListener('pointercancel', dragEnd);
-canvas.addEventListener('dblclick', resetView);
+manip.onResetView = resetView;
 
 /* ---------- export ---------- */
 
 const exporter = initExport({
   studio,
-  tracer,
+  tracer: view.tracer,
   ensureFinal,
-  name: () => (state.shape.scene === 'glyph' ? state.shape.glyph.name : state.shape.scene).replace(/[^a-z0-9-]+/gi, '-').toLowerCase(),
+  name: () => sceneName.replace(/[^a-z0-9-]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'scene',
   begin: () => {
-    exporting = true;
+    view.exporting = true;
     app.classList.add('is-exporting');
     studio.setCamera({ padding: EXPORT_PADDING });
     studio.frame(1);
   },
   end: () => {
-    exporting = false;
+    view.exporting = false;
     app.classList.remove('is-exporting');
     studio.setCamera({ padding: VIEWPORT_PADDING });
-    studio.frame(aspect());
-    invalidate({ camera: true, lights: true, environment: true });
+    studio.frame(view.aspect());
+    view.invalidate({ camera: true, lights: true, environment: true });
   },
 });
 
@@ -690,7 +334,7 @@ swFocus.addEventListener('change', (e) => {
 $('#sw-motion')!.addEventListener('change', (e) => document.documentElement.classList.toggle('reduce-motion', (e as CustomEvent<{ value: boolean }>).detail.value));
 $('#sw-filmic')!.addEventListener('change', (e) => {
   studio.setView({ transform: (e as CustomEvent<{ value: boolean }>).detail.value ? 'filmic' : 'standard' });
-  invalidate({});
+  view.invalidate({});
 });
 function toggleChrome() {
   app.classList.toggle('chrome-hidden');
@@ -707,55 +351,90 @@ $('#settings-menu [data-action="reset-view"]')!.addEventListener('click', () => 
 
 /* ---------- keyboard ---------- */
 
+const ARROWS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
+const isDepthKey = (e: KeyboardEvent) => e.code === 'BracketLeft' || e.code === 'BracketRight';
+/** controls that already use the arrow keys */
+const ownsArrows = (t: HTMLElement) => !!t.closest('.seg, .fs, .orb, .menu, .glyph-pop, .layers-list, [role="slider"]');
+
 window.addEventListener('keydown', (e) => {
+  if (e.defaultPrevented) return;
   const t = e.target as HTMLElement;
-  if (t.matches('input, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (t.matches('input, textarea, [contenteditable]')) return;
   const k = e.key.toLowerCase();
-  if (k === 'e') exporter.toggle();
-  else if (k === 's') openGlyphs();
-  else if (k === 'o') fileInput.click();
-  else if (k === 'm') matBtn.click();
+  if (e.metaKey || e.ctrlKey) {
+    if (k === 'z') {
+      if (e.shiftKey) editor.redo();
+      else editor.undo();
+    } else if (k === 'y') editor.redo();
+    else if (k === 'd') actions.duplicate();
+    else if (k === 'g') {
+      if (e.shiftKey) actions.ungroup();
+      else actions.group();
+    } else if (k === 'a') editor.selectAll();
+    else return;
+    e.preventDefault();
+    return;
+  }
+  if (e.altKey) return;
+  const arrow = ARROWS[e.key];
+  if (arrow || isDepthKey(e)) {
+    if (ownsArrows(t) || !editor.selection.length) return;
+    if (arrow) manip.nudge(arrow[0], arrow[1], 0, e.shiftKey);
+    else manip.nudge(0, 0, e.code === 'BracketRight' ? 1 : -1, e.shiftKey);
+    e.preventDefault();
+    return;
+  }
+  if (k === 'escape') {
+    if (!manip.cancel()) editor.escape();
+  } else if (k === 'delete' || k === 'backspace') actions.remove();
+  else if (k === 'e') exporter.toggle();
+  else if (k === 'a') pop.toggle(addMenu, $('#add-btn'));
+  else if (k === 's') openLibrary();
+  else if (k === 'o') openFile('add');
+  else if (k === 'm') materials.toggle(!materials.isOpen);
   else if (k === 'h') toggleChrome();
   else if (k === 'r') resetView();
-  else if (k === 'p') orthoBtn.click();
-  else if (['1', '2', '3', '4'].includes(k)) {
-    const id = Object.keys(VIEWS)[Number(k) - 1];
-    camSeg.set(id);
-  } else return;
+  else if (k === 'p') $('#ortho-btn')!.click();
+  else if (['1', '2', '3', '4'].includes(k)) camSeg.set(Object.keys(VIEWS)[Number(k) - 1]);
+  else return;
   e.preventDefault();
 });
+window.addEventListener('keyup', (e) => {
+  if (ARROWS[e.key] || isDepthKey(e)) manip.endNudge();
+});
+window.addEventListener('blur', () => manip.endNudge());
 
 /* ---------- boot ---------- */
 
 initComponents(document);
 initTips();
 refreshRim();
-renderSwatches();
-syncProps();
-placeOrbKey();
-updateGlyphPreview();
-syncDock();
-studio.setRig(state.rig);
-orbitTo(EXAMPLES.safe.view.az, EXAMPLES.safe.view.el);
-orbitAz.jump(EXAMPLES.safe.view.az);
-orbitEl.jump(EXAMPLES.safe.view.el);
-await subject.update(state.shape, 'final');
-contentChanged();
-resize();
+studio.setRig(light.rig);
+markExample(EXAMPLES[0].id);
+await load(EXAMPLES[0].build(), EXAMPLES[0].name, EXAMPLES[0].view, true);
+refreshUi();
 wake();
 
 /** Automation hooks for the e2e. */
 Object.assign(window, {
   __kiln: {
     ready: true,
-    webgpu,
-    state,
+    webgpu: view.webgpu,
+    editor,
+    runtime,
     exporter,
-    status: () => ({ state: statusEl.dataset.state, spp: lastCount, meshing, final: subject.final }),
-    pauseTrace: (p: boolean) => (tracePaused = p),
+    library,
+    layers,
+    doc: () => editor.doc,
+    select: (ids: string[]) => editor.select(ids),
+    objectScreenRect: (id: string) => overlay.rectOf([id]),
+    status: () => ({ state: view.statusState, spp: view.lastCount, meshing: runtime.busy, final: runtime.isFinal(editor.doc) }),
+    tracerStats: () => (view.tracer ? { ...view.tracer.stats } : null),
+    camera: () => ({ position: studio.camera.position.toArray(), frozen: studio.isFrozen }),
+    pauseTrace: (p: boolean) => (view.tracePaused = p),
     setTraceScale: (s: number) => {
-      traceScale = s;
-      invalidate({});
+      view.traceScale = s;
+      view.invalidate({});
     },
     THREE,
   },

@@ -124,6 +124,34 @@ export function buildMaterial(spec: MaterialSpec): THREE.MeshPhysicalMaterial {
   return m;
 }
 
+/** Shader-relevant switches: a change here needs a pipeline rebuild, value changes don't. */
+function featureKey(m: THREE.MeshPhysicalMaterial) {
+  return [m.vertexColors, m.side, m.clearcoat > 0, m.sheen > 0, m.metalness > 0, m.emissiveIntensity > 0].join();
+}
+
+/**
+ * Writes a spec into an existing material, so slider drags reuse the compiled pipeline. Flags a
+ * rebuild only when a feature switches on or off.
+ */
+export function syncMaterial(m: THREE.MeshPhysicalMaterial, spec: MaterialSpec) {
+  const before = featureKey(m);
+  m.color.set(spec.color);
+  m.roughness = spec.roughness;
+  m.metalness = spec.metalness ?? 0;
+  m.clearcoat = spec.clearcoat ?? 0;
+  m.clearcoatRoughness = spec.clearcoatRoughness ?? 0;
+  m.specularIntensity = spec.specularIntensity ?? 1;
+  m.emissive.set(spec.emissive ?? '#000000');
+  m.emissiveIntensity = spec.emissiveIntensity ?? 0;
+  m.sheen = spec.sheen ?? 0;
+  m.sheenColor.set(spec.sheenColor ?? '#ffffff');
+  m.sheenRoughness = spec.sheenRoughness ?? 1;
+  m.vertexColors = Boolean(spec.gradient);
+  m.side = spec.doubleSided ? THREE.DoubleSide : THREE.FrontSide;
+  m.name = spec.id;
+  if (featureKey(m) !== before) m.needsUpdate = true;
+}
+
 /**
  * Writes a 4-component float vertex-color gradient along `angle` (degrees, 0 = +X, 90 = +Y)
  * across the geometry's bounds. Float colors avoid the 8-bit atlas banding in 16-bit exports.

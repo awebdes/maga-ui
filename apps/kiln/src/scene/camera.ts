@@ -45,9 +45,9 @@ export function viewBounds(camera: THREE.Camera, root: THREE.Object3D) {
   const inv = camera.matrixWorldInverse;
   const min = new THREE.Vector3(Infinity, Infinity, Infinity);
   const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
-  root.traverse((o) => {
+  root.traverseVisible((o) => {
     const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh || !mesh.visible) return;
+    if (!mesh.isMesh) return;
     const pos = mesh.geometry.getAttribute('position');
     const m = new THREE.Matrix4().multiplyMatrices(inv, mesh.matrixWorld);
     // sample large meshes sparsely; the silhouette is still well covered
@@ -87,14 +87,46 @@ export function fitOrtho(camera: THREE.OrthographicCamera, root: THREE.Object3D,
   camera.updateProjectionMatrix();
 }
 
+/**
+ * `fitOrtho` from sampled world points (see samplePoints): the camera must already look at the
+ * content. Works for an empty scene too, given fallback points.
+ */
+export function fitOrthoPoints(camera: THREE.OrthographicCamera, points: Float32Array, padding = 0.15, aspect = 1) {
+  camera.updateMatrixWorld(true);
+  const inv = camera.matrixWorldInverse;
+  const min = new THREE.Vector3(Infinity, Infinity, Infinity);
+  const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+  for (let i = 0; i < points.length; i += 3) {
+    _v.set(points[i], points[i + 1], points[i + 2]).applyMatrix4(inv);
+    min.min(_v);
+    max.max(_v);
+  }
+  const cx = (min.x + max.x) / 2;
+  const cy = (min.y + max.y) / 2;
+  const scale = 1 / (1 - 2 * padding);
+  let halfW = Math.max(1e-3, ((max.x - min.x) / 2) * scale);
+  let halfH = Math.max(1e-3, ((max.y - min.y) / 2) * scale);
+  if (halfW / halfH > aspect) halfH = halfW / aspect;
+  else halfW = halfH * aspect;
+  camera.left = cx - halfW;
+  camera.right = cx + halfW;
+  camera.top = cy + halfH;
+  camera.bottom = cy - halfH;
+  const depth = max.z - min.z;
+  camera.near = Math.max(0.001, -max.z - depth * 0.5 - 0.1);
+  camera.far = -min.z + depth * 0.5 + 0.1;
+  camera.updateProjectionMatrix();
+}
+
 /** World-space points sampled from every visible mesh (at most `max`), for framing. */
 export function samplePoints(root: THREE.Object3D, max = 24000): Float32Array {
   root.updateMatrixWorld(true);
   const meshes: THREE.Mesh[] = [];
   let total = 0;
-  root.traverse((o) => {
+  // hidden groups hide their children: skip whole hidden subtrees
+  root.traverseVisible((o) => {
     const m = o as THREE.Mesh;
-    if (m.isMesh && m.visible) {
+    if (m.isMesh) {
       meshes.push(m);
       total += m.geometry.getAttribute('position').count;
     }

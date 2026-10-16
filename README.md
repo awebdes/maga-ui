@@ -6,14 +6,14 @@
 
 ## Kiln (`apps/kiln/`)
 
-Первый проект на ките: форма или SVG → 3D → материал, свет, ракурс → production PNG с прозрачным фоном (path tracing в браузере, WebGPU). Phase 1a: приложение на ките и look-dev Green clay под референсы — [`apps/kiln/README.md`](apps/kiln/README.md). Находки Phase 0 — [`apps/kiln/SPIKE.md`](apps/kiln/SPIKE.md).
+Первый проект на ките: форма или SVG → 3D-композиция → материал, свет, ракурс → production PNG с прозрачным фоном (path tracing в браузере, WebGPU). Phase 1a: приложение на ките и look-dev Green clay под референсы. Phase 1b: композиция из отдельных объектов — выбор и перетаскивание во вьюпорте, группы, форма и материал у каждого объекта, отмена — [`apps/kiln/README.md`](apps/kiln/README.md). Находки Phase 0 — [`apps/kiln/SPIKE.md`](apps/kiln/SPIKE.md).
 
 ```sh
 cd apps/kiln
 npm install
 npm run dev        # → localhost:5173 (приложение), /lookdev.html, /spike.html
-npm test           # vitest: мешер, геометрия, свет, тональная кривая
-node tests/e2e/app.mjs      # Playwright + SwiftShader WebGPU: приложение и экспорт
+npm test           # vitest: мешер, геометрия, свет, тональная кривая, документ сцены
+node tests/e2e/app.mjs      # Playwright + SwiftShader WebGPU: редактор и экспорт
 node tests/e2e/lookdev.mjs  # сверка цветов с референсом (--ref путь к картинке)
 ```
 

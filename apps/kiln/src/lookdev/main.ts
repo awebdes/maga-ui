@@ -3,8 +3,13 @@ import { createRenderer, hasWebGPUBackend, StillRenderer } from '../render/trace
 import { encodePng } from '../render/encode';
 import { viewPixel, type FloatImage } from '../render/view-transform';
 import { Studio } from '../studio/studio';
-import { buildSafe, safeBodyGeometry } from '../examples/safe';
-import { applyMaterials, defaultMaterials, type MaterialSet } from '../examples/parts';
+import { safeBodyGeometry, SAFE_SPOTS } from '../examples/safe';
+import { defaultMaterials, type MaterialSet } from '../examples/parts';
+import { safeDoc } from '../doc/examples';
+import { GeometryCache } from '../doc/geometry';
+import { SceneRuntime } from '../doc/runtime';
+import type { SceneDoc } from '../doc/scene';
+import type { MaterialSpec } from '../scene/materials';
 import type { RigParams } from '../scene/lights';
 import * as env from '../scene/environment';
 import { buildSafeScene } from '../spike/scene';
@@ -19,11 +24,23 @@ const canvas = document.querySelector<HTMLCanvasElement>('#view')!;
 const renderer = await createRenderer(canvas);
 renderer.setSize(640, 640, false);
 const studio = new Studio(renderer);
-const example = buildSafe();
+// the Safe composition, built from its scene document like the app does
+const runtime = new SceneRuntime(new GeometryCache());
+const example = { root: runtime.root, spots: SAFE_SPOTS };
+const doc: SceneDoc = safeDoc();
 let materials: MaterialSet = defaultMaterials();
-applyMaterials(example.root, materials);
-studio.setContent(example.root);
-studio.setCamera(example.camera);
+/** Look-dev parts → objects of the Safe document. */
+const PART_OF: Record<string, keyof MaterialSet> = { Safe: 'body', '%': 'accent', Briefcase: 'accent', Coin: 'coin' };
+function applyMaterials(_root: unknown, set: Record<keyof MaterialSet, MaterialSpec>) {
+  for (const o of doc.objects) {
+    const part = PART_OF[o.name];
+    if (part) o.materials = { main: { ...set[part] } };
+  }
+  runtime.reconcile(doc, 'final');
+}
+applyMaterials(null, materials);
+studio.setContent(runtime.root);
+studio.setCamera({ az: 23, el: 2, fov: 20, padding: 0.15, ortho: false });
 studio.frame(1);
 studio.render();
 

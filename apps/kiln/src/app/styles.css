@@ -320,46 +320,29 @@
   pointer-events: auto;
 }
 
-/* ---------- shape island + glyph library ---------- */
+/* ---------- icon library (opened next to whatever asked for it) ---------- */
 
-.shape-island {
-  flex-direction: column;
-}
-.glyph-btn {
-  width: 56px;
-  height: 56px;
-  padding: 0;
-  border-radius: var(--r-md);
-}
-.glyph-preview {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  color: var(--fg);
-  transition: transform var(--t-move) var(--spring-bounce);
-}
-.glyph-preview svg,
-.glyph-cell svg {
-  width: 100%;
-  height: 100%;
-  fill: currentColor;
-}
-.glyph-btn:hover .glyph-preview {
-  transform: scale(1.1) rotate(-6deg);
-}
 .glyph-pop {
-  top: 0;
-  left: calc(100% + 12px);
+  position: fixed;
+  z-index: 70;
   width: 344px;
+  min-width: 0;
   padding: 10px;
   display: grid;
   gap: 8px;
-  --menu-origin: top left;
-  transform: translateX(-6px) scale(0.96);
+  pointer-events: auto;
 }
-.glyph-pop.is-open {
-  transform: none;
+.glyph-cell svg,
+.layer-icon .glyph-svg,
+.sel-icon .glyph-svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+  stroke: none;
+}
+.glyph-mode {
+  padding: 2px 4px 0;
+  color: var(--fg-2);
 }
 .glyph-search {
   position: relative;
@@ -468,22 +451,387 @@
     transform: rotate(1turn);
   }
 }
-.dock.is-locked > :not(.dock-lock) {
-  visibility: hidden;
-}
-.dock-lock {
-  position: absolute;
-  inset: 0;
+.dock-part {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  border-radius: inherit;
+  gap: var(--gap-island);
+}
+.dock-part[hidden],
+.dock .fs[hidden] {
+  display: none;
+}
+.dock-hint {
+  gap: 14px;
+  height: var(--h-lg);
+  padding: 0 4px 0 14px;
+  color: var(--fg-2);
   font-size: var(--fs-13);
+}
+.dock-hint .cell {
+  gap: 6px;
+}
+.dock-note {
+  height: var(--h-lg);
+  padding: 0 10px 0 14px;
+  color: var(--fg-2);
+  font-size: var(--fs-13);
+}
+
+/* ---------- selection bar ---------- */
+
+.float.bc {
+  align-items: center;
+  gap: 8px;
+}
+.selbar {
+  gap: 4px;
+  padding: 5px;
+}
+.selbar[hidden] {
+  display: none;
+}
+.selbar.is-in {
+  animation: bar-in var(--t-pop) var(--spring) both;
+}
+/* motion only: a stalled animation (busy GPU) must never leave the bar invisible */
+@keyframes bar-in {
+  from {
+    transform: translateY(10px) scale(0.97);
+  }
+}
+.sel-chip {
+  gap: 8px;
+  max-width: 176px;
+  height: 36px;
+  padding: 0 10px 0 8px;
+}
+.sel-chip:not(.can-swap) {
+  cursor: default;
+}
+button.sel-chip:not(.can-swap):hover {
+  background: transparent;
+}
+.sel-icon {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.sel-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.sel-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sel-swap {
+  display: none;
+  color: var(--fg-3);
+}
+.sel-chip.can-swap .sel-swap {
+  display: block;
+}
+.selbar .fs {
+  height: 36px;
+  min-width: 112px;
+}
+.selbar > * {
+  flex-shrink: 0;
+}
+.bar-sep {
+  width: 1px;
+  height: 22px;
+  margin: 0 4px;
+  background: var(--line-strong);
+}
+.selbar .icon-btn {
+  width: 36px;
+  height: 36px;
+}
+.selbar .icon-btn[hidden] {
+  display: none;
+}
+button.icon-btn.danger:hover {
+  color: var(--danger);
+}
+
+/* signed values (tilt, turn, forward): the fill grows both ways from the middle */
+.fs.bipolar::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: var(--line-strong);
+}
+.fs.bipolar .fs-fill {
+  inset: 0 auto 0 50%;
+  width: 50%;
+  border-radius: 0;
+  transform: scaleX(calc((var(--v, 0.5) - 0.5) * 2));
+}
+.fs.bipolar .fs-fill::after {
+  transform: scaleX(calc(1 / max((var(--v, 0.5) - 0.5) * 2, (0.5 - var(--v, 0.5)) * 2, 0.02)));
+}
+
+/* ---------- objects island ---------- */
+
+.layers {
+  position: relative;
+  flex-direction: column;
+  align-items: stretch;
+  width: 232px;
+  padding: 6px;
+  gap: 2px;
+}
+.layers-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 0 0 10px;
+  color: var(--fg-3);
+}
+.layers-count {
+  margin-right: auto;
+  color: var(--fg-4);
+  font-size: var(--fs-11);
+}
+.layers-list {
+  display: grid;
+  gap: 1px;
+  max-height: min(50vh, 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.layer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 4px 0 10px;
+  border-radius: var(--r-sm);
+  color: var(--fg-2);
+  font-size: var(--fs-13);
+  user-select: none;
+  cursor: default;
+  transition: background-color var(--t-hover) var(--ease-out), color var(--t-hover) var(--ease-out), box-shadow var(--t-hover) var(--ease-out);
+}
+.layer:hover {
+  background: var(--cell);
+  color: var(--fg);
+}
+.layer[aria-selected="true"] {
+  background: rgba(89, 188, 255, 0.15);
+  box-shadow: 0 0 0 1px rgba(89, 188, 255, 0.32) inset;
+  color: var(--fg);
+}
+.layer.is-entered {
+  background: rgba(255, 255, 255, 0.04);
+}
+.layer:focus-visible {
+  outline-offset: -2px;
+}
+.layer-caret {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 20px;
+  margin: 0 -4px 0 -6px;
+  flex: none;
+}
+.layer-caret::before {
+  content: "";
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--fg-3);
+  transition: transform var(--t-move) var(--spring-bounce);
+}
+.layer[aria-expanded="false"] .layer-caret::before {
+  transform: rotate(-90deg);
+}
+.layer-indent {
+  align-self: stretch;
+  width: 8px;
+  margin: 6px 0 6px 2px;
+  flex: none;
+  border-left: 1px solid var(--line-strong);
+}
+.layer-icon {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
   color: var(--fg-2);
 }
-.dock-lock[hidden] {
-  display: none;
+.layer-icon svg.i {
+  width: 16px;
+  height: 16px;
+}
+.layer[aria-selected="true"] .layer-icon {
+  color: var(--fg);
+}
+.layer-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.layer-input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 1px var(--juice-b) inset;
+  font-size: var(--fs-13);
+  outline: none;
+}
+.layer-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--mat, #777);
+  box-shadow: inset -1px -2px 3px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.layer-sub {
+  color: var(--fg-4);
+  font-size: var(--fs-11);
+}
+.layer-eye {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 7px;
+  color: var(--fg-3);
+  opacity: 0;
+  transition: opacity var(--t-hover) var(--ease-out), background-color var(--t-hover) var(--ease-out), color var(--t-hover) var(--ease-out);
+}
+.layer:hover .layer-eye,
+.layer:focus-visible .layer-eye,
+.layer.is-hidden .layer-eye {
+  opacity: 1;
+}
+.layer-eye:hover {
+  background: var(--cell-hover);
+  color: var(--fg);
+}
+.layer.is-hidden .layer-name,
+.layer.is-hidden .layer-icon,
+.layer.is-hidden .layer-dot {
+  opacity: 0.38;
+}
+.layers-empty {
+  padding: 10px 8px 12px;
+  color: var(--fg-4);
+  font-size: var(--fs-12);
+  text-align: center;
+}
+.add-menu {
+  top: 0;
+  left: calc(100% + 12px);
+  min-width: 0;
+  --menu-origin: top left;
+  transform: translateX(-6px) scale(0.96);
+}
+.add-menu.is-open {
+  transform: none;
+}
+
+/* ---------- selection overlay ---------- */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  transition: opacity 240ms var(--ease-out);
+}
+.app.is-exporting .overlay,
+.app.chrome-hidden .overlay {
+  opacity: 0;
+}
+.app.is-exporting .overlay *,
+.app.chrome-hidden .overlay * {
+  pointer-events: none !important;
+}
+.ov-box {
+  fill: none;
+  stroke: var(--juice-b);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 6px rgba(89, 188, 255, 0.5));
+}
+.ov-item {
+  fill: none;
+  stroke: rgba(89, 188, 255, 0.6);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.ov-hover {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 1;
+}
+.ov-context {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 1;
+  stroke-dasharray: 5 5;
+}
+.ov-handle,
+.ov-knob {
+  fill: #fff;
+  stroke: var(--juice-a);
+  stroke-width: 1.25;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
+}
+.ov-stem {
+  stroke: var(--juice-b);
+  stroke-width: 1.25;
+  stroke-opacity: 0.8;
+}
+.ov-hit {
+  fill: transparent;
+  pointer-events: all;
+}
+.ov-hit-nw,
+.ov-hit-se {
+  cursor: nwse-resize;
+}
+.ov-hit-ne,
+.ov-hit-sw {
+  cursor: nesw-resize;
+}
+.ov-hit-tilt {
+  cursor: grab;
+}
+.ov-hit-tilt:active {
+  cursor: grabbing;
+}
+.ov-readout-bg {
+  fill: rgba(22, 22, 26, 0.88);
+  stroke: rgba(255, 255, 255, 0.12);
+}
+.ov-readout-text {
+  fill: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 11px;
 }
 
 /* ---------- materials ---------- */
@@ -498,6 +846,49 @@
 .part-seg > button[disabled] {
   opacity: 0.3;
   pointer-events: none;
+}
+.mat-scope {
+  margin: 0 0 10px;
+  color: var(--fg-3);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* the objects list steps aside while the material panels are open over the same corner */
+.app.mat-open .float.lm {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-12px, -50%);
+  transition: opacity 200ms var(--ease-out), transform 500ms var(--spring), visibility 0s linear 200ms;
+}
+/* and lift above the selection bar */
+.float.bl .panels {
+  transition: bottom 420ms var(--spring);
+}
+.app.has-selection .float.bl .panels {
+  bottom: calc(100% + 58px);
+}
+.mat-scope:empty,
+.slot-wrap[hidden],
+.mat-empty[hidden] {
+  display: none;
+}
+.mat-empty {
+  padding: 4px 8px 12px;
+  color: var(--fg-3);
+  font-size: var(--fs-12);
+  text-align: center;
+}
+.panel.is-empty .swatch-grid,
+.panel.is-empty .color-row,
+.panel.is-empty .stack {
+  opacity: 0.3;
+  pointer-events: none;
+}
+.mat-btn.is-empty .sphere {
+  opacity: 0.45;
 }
 .swatch-grid {
   padding: 0;
@@ -614,6 +1005,9 @@
   .dock .fs {
     min-width: 104px;
   }
+  .selbar .fs {
+    min-width: 96px;
+  }
   .dock .seg.lg > button {
     padding: 0 7px;
   }
@@ -672,7 +1066,22 @@
     width: auto;
   }
   .glyph-pop {
-    width: min(344px, calc(100vw - 100px));
+    width: min(344px, calc(100vw - 32px));
+  }
+  .layers {
+    width: 184px;
+  }
+  .layers-list {
+    max-height: 26vh;
+  }
+  .selbar {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+  }
+  .selbar .fs {
+    flex: 1 1 40%;
+    min-width: 0;
   }
   .brand .brand-scene {
     display: none;

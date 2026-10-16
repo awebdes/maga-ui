@@ -2,7 +2,7 @@ import * as THREE from 'three/webgpu';
 import { RectAreaLightTexturesLib } from 'three/examples/jsm/lights/RectAreaLightTexturesLib.js';
 import { LightRig, type RigParams } from '../scene/lights';
 import { greenClayEnvironment, studioTexture } from '../scene/environment';
-import { orbitDirection, samplePoints, framePerspective, fitOrtho, placeCamera } from '../scene/camera';
+import { orbitDirection, samplePoints, framePerspective, fitOrthoPoints, placeCamera } from '../scene/camera';
 import { DEFAULT_VIEW, type ViewSettings } from '../render/view-transform';
 
 /**
@@ -24,6 +24,21 @@ export interface CameraState {
 
 export const DEFAULT_CAMERA: CameraState = { az: 23, el: 4, ortho: false, fov: 20, padding: 0.14 };
 
+interface Framing {
+  ortho: boolean;
+  pos: THREE.Vector3;
+  target: THREE.Vector3;
+  near: number;
+  far: number;
+  /** orthographic left, right, top, bottom */
+  bounds: [number, number, number, number];
+  /** light rig placement */
+  center: THREE.Vector3;
+  radius: number;
+}
+
+const EMPTY_POINTS = new Float32Array([-0.5, -0.5, -0.5, 0.5, 0.5, 0.5, -0.5, 0.5, 0.5, 0.5, -0.5, -0.5]);
+
 let ltcReady = false;
 /** Raster preview needs the LTC tables for rect area lights; the path tracer doesn't. */
 function initAreaLights() {
@@ -44,6 +59,10 @@ export class Studio {
   readonly center = new THREE.Vector3();
   radius = 1;
   private points: Float32Array | null = null;
+  private aspect = 1;
+  private frozen = false;
+  private current: Framing | null = null;
+  private goal: Framing | null = null;
 
   constructor(readonly renderer: THREE.WebGPURenderer) {
     initAreaLights();
@@ -91,7 +110,9 @@ export class Studio {
   }
 
   private measure() {
-    const pts = samplePoints(this.content);
+    let pts = samplePoints(this.content);
+    // nothing visible: frame a unit box at the origin, so the camera holds a sane pose
+    if (!pts.length) pts = EMPTY_POINTS;
     this.points = pts;
     const box = new THREE.Box3();
     const v = new THREE.Vector3();
@@ -108,29 +129,123 @@ export class Studio {
     return pts;
   }
 
-  /** Frames the active camera for an aspect (width / height) and re-places the light rig. */
-  frame(aspect: number) {
+  /**
+   * Frames the active camera for an aspect (width / height) and re-places the light rig.
+   * `glide` eases from the current framing to the new one (see `step`); a frozen studio keeps its
+   * framing, so the camera holds still while objects are dragged.
+   */
+  frame(aspect: number, glide = false) {
+    this.aspect = aspect;
+    if (this.frozen) return;
+    const goal = this.computeFraming(aspect);
+    if (glide && this.current && this.current.ortho === goal.ortho) {
+      this.goal = goal;
+      return;
+    }
+    this.current = goal;
+    this.goal = null;
+    this.apply(goal);
+  }
+
+  /** Re-places the light rig on the current framing (after a rig change). */
+  refreshRig() {
+    const f = this.current;
+    if (f) this.rig.place(this.camera, f.center, f.radius);
+  }
+
+  /** Holds the framing while the user drags objects; `unfreeze` lets it glide to the new fit. */
+  freeze() {
+    this.frozen = true;
+  }
+
+  unfreeze(glide = true) {
+    this.frozen = false;
+    this.frame(this.aspect, glide);
+  }
+
+  get isFrozen() {
+    return this.frozen;
+  }
+
+  /** Advances a glide. Returns true while the camera is still moving. */
+  step(dt: number): boolean {
+    const { current: c, goal: g } = this;
+    if (!c || !g) return false;
+    const k = 1 - Math.exp(-dt / 0.11);
+    const lerp = (a: number, b: number) => a + (b - a) * k;
+    c.pos.lerp(g.pos, k);
+    c.target.lerp(g.target, k);
+    c.center.lerp(g.center, k);
+    c.radius = lerp(c.radius, g.radius);
+    c.near = Math.min(c.near, g.near);
+    c.far = Math.max(c.far, g.far);
+    for (let i = 0; i < 4; i++) c.bounds[i] = lerp(c.bounds[i], g.bounds[i]);
+    const done = c.pos.distanceTo(g.pos) < 1e-4 * g.radius && c.target.distanceTo(g.target) < 1e-4 * g.radius && Math.abs(c.radius - g.radius) < 1e-4;
+    if (done) {
+      this.current = g;
+      this.goal = null;
+    }
+    this.apply(this.current!);
+    return !done;
+  }
+
+  private computeFraming(aspect: number): Framing {
     const pts = this.points ?? this.measure();
     const { az, el, fov, padding } = this.cam;
     const dir = orbitDirection(az, el);
     if (this.cam.ortho) {
       const cam = this.orthographic;
       placeCamera(cam, az, el, this.center, this.radius * 8);
-      fitOrtho(cam, this.content, padding, aspect);
-    } else {
-      const cam = this.perspective;
-      const f = framePerspective(pts, dir, fov, aspect, padding);
-      cam.fov = fov;
-      cam.aspect = aspect;
+      fitOrthoPoints(cam, pts, padding, aspect);
+      return {
+        ortho: true,
+        pos: cam.position.clone(),
+        target: this.center.clone(),
+        near: cam.near,
+        far: cam.far,
+        bounds: [cam.left, cam.right, cam.top, cam.bottom],
+        center: this.center.clone(),
+        radius: this.radius,
+      };
+    }
+    const f = framePerspective(pts, dir, fov, aspect, padding);
+    return {
+      ortho: false,
+      pos: f.target.clone().addScaledVector(dir, f.distance),
+      target: f.target.clone(),
+      near: f.near,
+      far: f.far,
+      bounds: [0, 0, 0, 0],
+      center: this.center.clone(),
+      radius: this.radius,
+    };
+  }
+
+  private apply(f: Framing) {
+    const { az, fov } = this.cam;
+    if (f.ortho) {
+      const cam = this.orthographic;
+      cam.position.copy(f.pos);
+      cam.up.set(0, 1, 0);
+      cam.lookAt(f.target);
+      [cam.left, cam.right, cam.top, cam.bottom] = f.bounds;
       cam.near = f.near;
       cam.far = f.far;
-      cam.position.copy(f.target).addScaledVector(dir, f.distance);
+      cam.updateProjectionMatrix();
+      cam.updateMatrixWorld(true);
+    } else {
+      const cam = this.perspective;
+      cam.fov = fov;
+      cam.aspect = this.aspect;
+      cam.near = f.near;
+      cam.far = f.far;
+      cam.position.copy(f.pos);
       cam.up.set(0, 1, 0);
       cam.lookAt(f.target);
       cam.updateProjectionMatrix();
       cam.updateMatrixWorld(true);
     }
-    this.rig.place(this.camera, this.center, this.radius);
+    this.rig.place(this.camera, f.center, f.radius);
     // the environment's side and top panels follow the camera like the key does
     this.scene.environmentRotation.set(0, (az * Math.PI) / 180, 0);
   }
