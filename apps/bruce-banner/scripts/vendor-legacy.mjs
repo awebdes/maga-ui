@@ -16,11 +16,18 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const argOrigin = process.argv.indexOf('--origin');
 const ORIGIN = (argOrigin > 0 ? process.argv[argOrigin + 1] : 'https://bruce-banner.vercel.app').replace(/\/$/, '');
 
-async function get(path, as = 'text') {
+// the deploy build runs this too: a dropped connection retries instead of failing the build
+async function get(path, as = 'text', attempt = 1) {
   const url = path.startsWith('http') ? path : ORIGIN + path;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${url}`);
-  return as === 'bytes' ? new Uint8Array(await res.arrayBuffer()) : res.text();
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${url}`);
+    return as === 'bytes' ? new Uint8Array(await res.arrayBuffer()) : await res.text();
+  } catch (e) {
+    if (attempt >= 4) throw e;
+    await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
+    return get(path, as, attempt + 1);
+  }
 }
 
 /** `money-loan-xU2yxWFH.png` → `money-loan.png`; Vite hashes are 8 base64url chars. */

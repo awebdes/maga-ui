@@ -111,7 +111,7 @@ E2E и паритет требуют `npm run vendor`. Скриншоты леж
 
 ## Деплой
 
-Vercel, корень проекта — `apps/bruce-banner` (`vercel.json`: Vite, функции `api/ai/*`).
+Vercel, корень проекта — `apps/bruce-banner` (`vercel.json`: Vite, функции `api/ai/*`). Пока брендовых файлов нет в git, сборка сначала скачивает их со старого bruce-banner.vercel.app (`npm run vendor`), поэтому старый деплой нельзя удалять, пока файлы не попадут в репозиторий.
 
 | Env | Зачем |
 |---|---|
