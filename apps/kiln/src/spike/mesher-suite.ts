@@ -57,7 +57,7 @@ export async function runMesherSuite(
   const group = new THREE.Group();
   group.name = 'mesher-suite';
   const mats = {
-    green: buildMaterial(findMaterial('green-satin')),
+    green: buildMaterial(findMaterial('green-clay')),
     orange: buildMaterial(findMaterial('orange-gradient')),
   };
 

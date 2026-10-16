@@ -4,8 +4,8 @@ import * as THREE from 'three/webgpu';
  * Material presets. Every preset is a MeshPhysicalMaterial so both the raster preview and
  * the path tracer read the same values. Colors are sRGB hex (converted by three.js).
  *
- * Green clay has no subsurface scattering in either renderer, so "clay" is diffuse +
- * sheen + a light clearcoat lit by a bright studio dome.
+ * Green clay is a satin plastic: diffuse + a light clearcoat. No sheen: it adds a white haze at
+ * grazing angles that the references don't have.
  */
 
 export interface MaterialSpec {
@@ -16,6 +16,11 @@ export interface MaterialSpec {
   metalness?: number;
   clearcoat?: number;
   clearcoatRoughness?: number;
+  /** dielectric specular strength (1 = 4% at normal incidence) */
+  specularIntensity?: number;
+  /** self-glow in the base hue: stands in for the extra light the references aim at accents */
+  emissive?: string;
+  emissiveIntensity?: number;
   sheen?: number;
   sheenColor?: string;
   sheenRoughness?: number;
@@ -23,50 +28,48 @@ export interface MaterialSpec {
   gradient?: string[];
   /** gradient direction in object space, normalized by the mesher bounds */
   gradientAngle?: number;
+  doubleSided?: boolean;
 }
 
 export const GREEN_CLAY: MaterialSpec[] = [
   {
-    id: 'green-satin',
-    name: 'Green satin',
-    color: '#4fbf2b',
-    roughness: 0.5,
-    clearcoat: 0.25,
+    // albedo fitted to the reference safe under the filmic view transform: linear (0.066, 0.5, 0.0095)
+    id: 'green-clay',
+    name: 'Green clay',
+    color: '#49bc18',
+    roughness: 0.55,
+    specularIntensity: 0.3,
+    clearcoat: 0.05,
     clearcoatRoughness: 0.35,
-    sheen: 0.35,
-    sheenColor: '#c9f7a0',
-    sheenRoughness: 0.55,
   },
   {
     id: 'orange-gradient',
     name: 'Orange gradient',
     color: '#ffffff',
-    gradient: ['#ffb21a', '#ff6a00', '#f03c00'],
+    gradient: ['#ff9a12', '#ff6400', '#f24000'],
     gradientAngle: -35,
-    roughness: 0.42,
-    clearcoat: 0.3,
+    roughness: 0.5,
+    specularIntensity: 0.4,
+    clearcoat: 0.1,
     clearcoatRoughness: 0.3,
-    sheen: 0.25,
-    sheenColor: '#ffd9a8',
-    sheenRoughness: 0.5,
+    emissive: '#ff5200',
+    emissiveIntensity: 0.45,
   },
   {
     id: 'coin-grey',
     name: 'Coin grey',
-    color: '#d8dcd4',
-    roughness: 0.45,
-    clearcoat: 0.3,
+    color: '#f8f9f6',
+    roughness: 0.5,
+    specularIntensity: 0.5,
+    clearcoat: 0.1,
     clearcoatRoughness: 0.3,
-    sheen: 0.2,
-    sheenColor: '#ffffff',
-    sheenRoughness: 0.6,
   },
   {
     id: 'white-plastic',
     name: 'White plastic',
     color: '#f2f3ef',
-    roughness: 0.4,
-    clearcoat: 0.35,
+    roughness: 0.45,
+    clearcoat: 0.25,
     clearcoatRoughness: 0.25,
   },
   {
@@ -77,6 +80,23 @@ export const GREEN_CLAY: MaterialSpec[] = [
     metalness: 1,
   },
 ];
+
+/** Swatches in the material panel: the Green clay set first, then neutrals and metals. */
+export const MATERIAL_LIBRARY: MaterialSpec[] = [
+  ...GREEN_CLAY.filter((m) => m.id !== 'chrome'),
+  { id: 'mint-clay', name: 'Mint clay', color: '#3ccf9a', roughness: 0.55, clearcoat: 0.15, clearcoatRoughness: 0.35 },
+  { id: 'sky-clay', name: 'Sky clay', color: '#3d8bff', roughness: 0.55, clearcoat: 0.15, clearcoatRoughness: 0.35 },
+  { id: 'coral', name: 'Coral', color: '#ff5a4e', roughness: 0.5, clearcoat: 0.2, clearcoatRoughness: 0.3 },
+  { id: 'graphite', name: 'Graphite', color: '#2b2d31', roughness: 0.45, clearcoat: 0.3, clearcoatRoughness: 0.25 },
+  { id: 'gold', name: 'Gold', color: '#f2c14e', roughness: 0.22, metalness: 1 },
+  GREEN_CLAY.find((m) => m.id === 'chrome')!,
+];
+
+/** CSS color for swatch spheres and the material button. */
+export function swatchColor(spec: MaterialSpec) {
+  if (spec.gradient) return `linear-gradient(135deg, ${spec.gradient.join(', ')})`;
+  return spec.color;
+}
 
 export function findMaterial(id: string, list: MaterialSpec[] = GREEN_CLAY) {
   const m = list.find((x) => x.id === id);
@@ -91,10 +111,14 @@ export function buildMaterial(spec: MaterialSpec): THREE.MeshPhysicalMaterial {
     metalness: spec.metalness ?? 0,
     clearcoat: spec.clearcoat ?? 0,
     clearcoatRoughness: spec.clearcoatRoughness ?? 0,
+    specularIntensity: spec.specularIntensity ?? 1,
+    emissive: new THREE.Color(spec.emissive ?? '#000000'),
+    emissiveIntensity: spec.emissiveIntensity ?? 0,
     sheen: spec.sheen ?? 0,
     sheenColor: new THREE.Color(spec.sheenColor ?? '#ffffff'),
     sheenRoughness: spec.sheenRoughness ?? 1,
     vertexColors: Boolean(spec.gradient),
+    side: spec.doubleSided ? THREE.DoubleSide : THREE.FrontSide,
   });
   m.name = spec.id;
   return m;

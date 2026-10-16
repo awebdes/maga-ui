@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e:spike": "node tests/e2e/spike.mjs",
-    "e2e:mesher": "node tests/e2e/mesher.mjs"
+    "e2e:mesher": "node tests/e2e/mesher.mjs",
+    "e2e:app": "node tests/e2e/app.mjs",
+    "e2e:lookdev": "node tests/e2e/lookdev.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

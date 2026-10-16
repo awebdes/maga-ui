@@ -1,10 +1,25 @@
 /**
  * Turns the path tracer's linear float output into display-referred pixels.
  *
- * Matches Blender's "Standard" view transform used by the bank guide: no tone mapping,
- * a hard per-channel clamp to [0, 1], then the sRGB transfer curve. Alpha is straight
- * (not premultiplied) and passes through linearly.
+ * Two view transforms:
+ * - "filmic": the ACES fit three.js uses for `ACESFilmicToneMapping`, so stills match the raster
+ *   preview. The Green clay references measure as filmic: one green albedo under ACES explains
+ *   every sampled spot within ΔE76 ≈ 2 (Standard leaves the bright side faces 12 ΔE off).
+ * - "standard": no tone mapping, a hard per-channel clamp, then sRGB. Blender's "Standard",
+ *   which the silver bank guide uses.
+ *
+ * Alpha is straight (not premultiplied) and passes through linearly.
  */
+
+export type ViewTransform = 'filmic' | 'standard';
+
+export interface ViewSettings {
+  transform: ViewTransform;
+  /** linear multiplier applied before the transform */
+  exposure: number;
+}
+
+export const DEFAULT_VIEW: ViewSettings = { transform: 'filmic', exposure: 1 };
 
 /** Linear → sRGB electro-optical transfer, input clamped to [0, 1]. */
 export function linearToSrgb(x: number): number {
@@ -18,6 +33,40 @@ export function srgbToLinear(x: number): number {
   if (x <= 0) return 0;
   if (x >= 1) return 1;
   return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+}
+
+const clamp01 = (x: number) => (x > 0 ? (x < 1 ? x : 1) : 0);
+const rrtOdt = (x: number) => (x * (x + 0.0245786) - 0.000090537) / (x * (0.983729 * x + 0.432951) + 0.238081);
+
+/**
+ * three.js `acesFilmicToneMapping` (Stephen Hill's RRT + ODT fit), linear sRGB in and out.
+ * Writes the display-linear result into `out`.
+ */
+export function acesFilmic(r: number, g: number, b: number, out: Float32Array | number[]) {
+  r /= 0.6;
+  g /= 0.6;
+  b /= 0.6;
+  const ir = rrtOdt(0.59719 * r + 0.35458 * g + 0.04823 * b);
+  const ig = rrtOdt(0.076 * r + 0.90834 * g + 0.01566 * b);
+  const ib = rrtOdt(0.0284 * r + 0.13383 * g + 0.83777 * b);
+  out[0] = clamp01(1.60475 * ir - 0.53108 * ig - 0.07367 * ib);
+  out[1] = clamp01(-0.10208 * ir + 1.10813 * ig - 0.00605 * ib);
+  out[2] = clamp01(-0.00327 * ir - 0.07276 * ig + 1.07602 * ib);
+}
+
+/** Scene-linear RGB → display sRGB (0..1) for one pixel. */
+export function viewPixel(r: number, g: number, b: number, view: ViewSettings, out: Float32Array | number[]) {
+  const e = view.exposure;
+  if (view.transform === 'filmic') {
+    acesFilmic(r * e, g * e, b * e, out);
+    out[0] = linearToSrgb(out[0]);
+    out[1] = linearToSrgb(out[1]);
+    out[2] = linearToSrgb(out[2]);
+  } else {
+    out[0] = linearToSrgb(r * e);
+    out[1] = linearToSrgb(g * e);
+    out[2] = linearToSrgb(b * e);
+  }
 }
 
 export interface FloatImage {
@@ -64,11 +113,12 @@ export interface EncodedPixels {
  * Applies the view transform and quantizes to 8 or 16 bits per channel.
  * Fully transparent pixels get zero color so encoders and viewers don't show garbage.
  */
-export function toDisplay(img: FloatImage, depth: 8 | 16): EncodedPixels {
+export function toDisplay(img: FloatImage, depth: 8 | 16, view: ViewSettings = DEFAULT_VIEW): EncodedPixels {
   const n = img.width * img.height;
   const max = depth === 16 ? 65535 : 255;
   const out = depth === 16 ? new Uint16Array(n * 4) : new Uint8Array(n * 4);
   const d = img.data;
+  const px = new Float32Array(3);
   for (let i = 0; i < n; i++) {
     const o = i * 4;
     let a = d[o + 3];
@@ -78,9 +128,10 @@ export function toDisplay(img: FloatImage, depth: 8 | 16): EncodedPixels {
       out[o] = out[o + 1] = out[o + 2] = out[o + 3] = 0;
       continue;
     }
-    out[o] = Math.round(linearToSrgb(d[o]) * max);
-    out[o + 1] = Math.round(linearToSrgb(d[o + 1]) * max);
-    out[o + 2] = Math.round(linearToSrgb(d[o + 2]) * max);
+    viewPixel(d[o], d[o + 1], d[o + 2], view, px);
+    out[o] = Math.round(px[0] * max);
+    out[o + 1] = Math.round(px[1] * max);
+    out[o + 2] = Math.round(px[2] * max);
     out[o + 3] = Math.round(a * max);
   }
   return { width: img.width, height: img.height, data: out, depth };

@@ -38,36 +38,100 @@ export function hasWebGPUBackend(renderer: THREE.WebGPURenderer): boolean {
 
 const nextTask = () => new Promise<void>((r) => setTimeout(r, 0));
 
+/** What changed since the tracer last saw the scene. */
+export interface SceneChanges {
+  /** geometry added, removed or replaced: rebuild the BVH */
+  geometry?: boolean;
+  materials?: boolean;
+  lights?: boolean;
+  environment?: boolean;
+  camera?: boolean;
+}
+
 /**
- * Renders path-traced stills at an exact size, independent of the canvas.
- * One instance per renderer; renders are serialized.
+ * One WebGPUPathTracer for the whole app: the idle viewport accumulates into the canvas, stills
+ * render at an exact size and are read back as float RGBA. Both share BVHs and compiled kernels.
  */
-export class StillRenderer {
-  readonly tracer: WebGPUPathTracer;
+export class Tracer {
+  readonly pt: WebGPUPathTracer;
   private busy = false;
+  private sceneSet: THREE.Scene | null = null;
+  private cameraSet: THREE.Camera | null = null;
+  private pending: SceneChanges = { geometry: true };
 
   constructor(private renderer: THREE.WebGPURenderer) {
     const t = new WebGPUPathTracer(renderer);
     t.synchronizeRenderSize = false;
     t.dynamicLowRes = false;
     t.renderDelay = 0;
-    t.minSamples = 1;
-    t.fadeDuration = 0;
     t.transmissiveBackground = TRANSMISSIVE_BACKGROUND_ENVIRONMENT;
-    t.maxBounces = 12;
-    this.tracer = t;
+    t.maxBounces = 8;
+    this.pt = t;
   }
 
-  async render(scene: THREE.Scene, camera: THREE.Camera, opts: StillOptions): Promise<StillResult> {
+  get rendering() {
+    return this.busy;
+  }
+
+  /** Records changes; they are applied lazily before the next sample. */
+  invalidate(changes: SceneChanges) {
+    for (const k of Object.keys(changes) as (keyof SceneChanges)[]) if (changes[k]) this.pending[k] = true;
+  }
+
+  private sync(scene: THREE.Scene, camera: THREE.Camera) {
+    const t = this.pt;
+    const p = this.pending;
+    if (p.geometry || this.sceneSet !== scene) {
+      t.setScene(scene, camera);
+      this.sceneSet = scene;
+      this.cameraSet = camera;
+    } else {
+      if (this.cameraSet !== camera) {
+        t.setCamera(camera);
+        this.cameraSet = camera;
+      } else if (p.camera) t.updateCamera();
+      if (p.materials) t.updateMaterials();
+      if (p.lights) t.updateLights();
+      if (p.environment) t.updateEnvironment();
+    }
+    this.pending = {};
+  }
+
+  /** Starts (or restarts) progressive tracing into the canvas at a fraction of its size. */
+  beginViewport(scene: THREE.Scene, camera: THREE.Camera, opts: { width: number; height: number; maxSamples: number }) {
+    const t = this.pt;
+    t.maxSamples = opts.maxSamples;
+    t.minSamples = 3;
+    t.fadeDuration = 320;
+    t.setSize(Math.max(8, Math.round(opts.width)), Math.max(8, Math.round(opts.height)));
+    this.sync(scene, camera);
+    t.reset();
+  }
+
+  /** One viewport frame: accumulate and present. */
+  stepViewport() {
+    if (!this.busy) this.pt.renderSample();
+  }
+
+  async sampleCount() {
+    const c = await this.pt.getSampleCountsAsync();
+    return c;
+  }
+
+  /** Renders a still at an exact size, independent of the canvas. */
+  async still(scene: THREE.Scene, camera: THREE.Camera, opts: StillOptions): Promise<StillResult> {
     if (this.busy) throw new Error('A render is already running');
     this.busy = true;
     const { width, height, samples, onProgress, signal } = opts;
-    const t = this.tracer;
+    const t = this.pt;
     const t0 = performance.now();
     try {
       t.maxSamples = samples;
+      t.minSamples = 1;
+      t.fadeDuration = 0;
       t.setSize(width, height);
-      t.setScene(scene, camera);
+      this.invalidate({ camera: true, lights: true, environment: true });
+      this.sync(scene, camera);
       t.reset();
       let done = 0;
       let frame = 0;
@@ -97,6 +161,23 @@ export class StillRenderer {
       return { ...img, ms: performance.now() - t0, samples: done };
     } finally {
       this.busy = false;
+      // the viewport restarts from scratch after a still
+      this.invalidate({ camera: true });
     }
+  }
+}
+
+/** Stills only (spike and look-dev pages). */
+export class StillRenderer {
+  private tracer: Tracer;
+  constructor(renderer: THREE.WebGPURenderer) {
+    this.tracer = new Tracer(renderer);
+  }
+  get pt() {
+    return this.tracer.pt;
+  }
+  render(scene: THREE.Scene, camera: THREE.Camera, opts: StillOptions) {
+    this.tracer.invalidate({ geometry: true });
+    return this.tracer.still(scene, camera, opts);
   }
 }

@@ -181,3 +181,22 @@ export function greenClayStudio(opts: { keyAz?: number; keyEl?: number; intensit
     ],
   };
 }
+
+/**
+ * Environment for the Green clay rig, relative to the camera (rotate it with the camera's azimuth):
+ * - dome: lifts the shadows to about 0.1 of a white surface;
+ * - side panel at 70° right: the right faces become the brightest planes, evenly lit as in the refs;
+ * - top strip: lights top faces and the top edges of front faces.
+ * The key is a close rect light (`LightRig`), not part of the environment.
+ */
+export function greenClayEnvironment(level = 1): StudioSpec {
+  return {
+    zenith: [0.148 * level, 0.152 * level, 0.159 * level],
+    horizon: [0.118 * level, 0.122 * level, 0.126 * level],
+    ground: [0.033 * level, 0.033 * level, 0.033 * level],
+    panels: [
+      { az: 70, el: 12, w: 40, h: 70, intensity: 10.4 * level, soft: 0.5 },
+      { az: 0, el: 80, w: 110, h: 24, intensity: 1.2 * level, soft: 0.6 },
+    ],
+  };
+}

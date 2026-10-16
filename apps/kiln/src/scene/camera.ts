@@ -86,3 +86,87 @@ export function fitOrtho(camera: THREE.OrthographicCamera, root: THREE.Object3D,
   camera.far = -min.z + depth * 0.5 + 0.1;
   camera.updateProjectionMatrix();
 }
+
+/** World-space points sampled from every visible mesh (at most `max`), for framing. */
+export function samplePoints(root: THREE.Object3D, max = 24000): Float32Array {
+  root.updateMatrixWorld(true);
+  const meshes: THREE.Mesh[] = [];
+  let total = 0;
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (m.isMesh && m.visible) {
+      meshes.push(m);
+      total += m.geometry.getAttribute('position').count;
+    }
+  });
+  const step = Math.max(1, Math.ceil(total / max));
+  const out: number[] = [];
+  for (const m of meshes) {
+    const pos = m.geometry.getAttribute('position');
+    for (let i = 0; i < pos.count; i += step) {
+      _v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
+      out.push(_v.x, _v.y, _v.z);
+    }
+  }
+  return new Float32Array(out);
+}
+
+export interface Framing {
+  /** world point the camera looks at */
+  target: THREE.Vector3;
+  /** camera distance from the target along the orbit direction */
+  distance: number;
+  near: number;
+  far: number;
+}
+
+/**
+ * Frames points in a perspective camera looking along -dir (orbit direction), with `padding` as
+ * a fraction of the frame on each side. Exact for the given center: every point satisfies
+ * |x| / depth ≤ tan(half fov) · (1 - 2 · padding).
+ */
+export function framePerspective(points: Float32Array, dir: THREE.Vector3, fovDeg: number, aspect: number, padding: number): Framing {
+  const toward = dir.clone().normalize();
+  const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), toward);
+  if (right.lengthSq() < 1e-8) right.set(1, 0, 0);
+  right.normalize();
+  const up = new THREE.Vector3().crossVectors(toward, right);
+  // view-plane bounds → center
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  const n = points.length / 3;
+  for (let i = 0; i < n; i++) {
+    const x = points[i * 3], y = points[i * 3 + 1], z = points[i * 3 + 2];
+    const px = x * right.x + y * right.y + z * right.z;
+    const py = x * up.x + y * up.y + z * up.z;
+    const pz = x * toward.x + y * toward.y + z * toward.z;
+    if (px < minX) minX = px;
+    if (px > maxX) maxX = px;
+    if (py < minY) minY = py;
+    if (py > maxY) maxY = py;
+    if (pz < minZ) minZ = pz;
+    if (pz > maxZ) maxZ = pz;
+  }
+  if (n === 0) return { target: new THREE.Vector3(), distance: 5, near: 0.1, far: 100 };
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  const cz = (minZ + maxZ) / 2;
+  const ty = Math.tan(((fovDeg / 2) * Math.PI) / 180) * (1 - 2 * padding);
+  const tx = ty * aspect;
+  let d = 0;
+  for (let i = 0; i < n; i++) {
+    const x = points[i * 3], y = points[i * 3 + 1], z = points[i * 3 + 2];
+    const px = x * right.x + y * right.y + z * right.z - cx;
+    const py = x * up.x + y * up.y + z * up.z - cy;
+    const pz = x * toward.x + y * toward.y + z * toward.z - cz;
+    const need = Math.max(Math.abs(px) / tx, Math.abs(py) / ty) + pz;
+    if (need > d) d = need;
+  }
+  const target = new THREE.Vector3().addScaledVector(right, cx).addScaledVector(up, cy).addScaledVector(toward, cz);
+  const span = maxZ - minZ;
+  return {
+    target,
+    distance: d,
+    near: Math.max(0.01, d - (maxZ - cz) - span * 0.25 - 0.05),
+    far: d + (cz - minZ) + span * 0.25 + 0.05,
+  };
+}

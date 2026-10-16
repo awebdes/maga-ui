@@ -10,7 +10,7 @@ export function buildSafeScene(): THREE.Group {
   const root = new THREE.Group();
   root.name = 'safe-ref';
 
-  const green = buildMaterial(findMaterial('green-satin'));
+  const green = buildMaterial(findMaterial('green-clay'));
   const orange = buildMaterial(findMaterial('orange-gradient'));
   const grey = buildMaterial(findMaterial('coin-grey'));
 

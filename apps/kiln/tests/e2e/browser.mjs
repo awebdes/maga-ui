@@ -13,16 +13,16 @@ export const WEBGPU_FLAGS = [
   '--use-vulkan=swiftshader',
   '--use-webgpu-adapter=swiftshader',
   '--use-angle=swiftshader',
-  // Chromium 141's Dawn lazily clears 3D float storage textures through a 2D view, which fails
-  // validation for the path tracer's LUT. The LUT is fully written by a compute pass anyway.
-  '--disable-dawn-features=lazy_clear_resource_on_first_use',
+  // No --disable-dawn-features=lazy_clear_resource_on_first_use: it hides Dawn's lazy-clear bug
+  // on 3D storage textures but leaves every other GPU allocation uninitialized, and the path
+  // tracer then accumulates garbage. src/render/compat.ts zero-fills 3D storage textures instead.
 ];
 
-export async function startServer(port = 4317) {
+export async function startServer(port = 4317, { hmr = true } = {}) {
   const server = await createServer({
     root,
     configFile: `${root}vite.config.ts`,
-    server: { port, strictPort: true, host: '127.0.0.1' },
+    server: { port, strictPort: true, host: '127.0.0.1', ...(hmr ? {} : { hmr: false, watch: null }) },
     logLevel: 'error',
   });
   await server.listen();
@@ -31,7 +31,7 @@ export async function startServer(port = 4317) {
 
 export async function launch({ width = 1440, height = 900 } = {}) {
   const browser = await chromium.launch({ args: WEBGPU_FLAGS });
-  const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
+  const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, acceptDownloads: true });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));

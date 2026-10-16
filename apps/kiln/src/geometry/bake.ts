@@ -25,23 +25,33 @@ export class Baker {
     };
   }
 
+  /**
+   * Meshes a shape. `coverage` may be a function: it is only called when the worker doesn't hold
+   * the shape's distance field yet, so cached shapes skip rasterizing.
+   */
   async bake(
     key: string,
-    coverage: Coverage,
+    coverage: Coverage | (() => Promise<Coverage>),
     form: FormParams,
     resolution: number,
     opts: { checkTopology?: boolean; simplify?: number } = {},
   ): Promise<BakeResult> {
-    const id = this.nextId++;
-    const req: BakeRequest = { id, key, form, resolution, ...opts };
-    if (!this.sent.has(key)) {
-      req.coverage = { data: coverage.data, w: coverage.w, h: coverage.h, px: coverage.px, x0: coverage.x0, y0: coverage.y0 };
-      this.sent.add(key);
-    }
-    const res = await new Promise<BakeResponse>((resolve) => {
-      this.pending.set(id, { resolve });
-      this.worker.postMessage(req);
-    });
+    const send = async (withCoverage: boolean) => {
+      const id = this.nextId++;
+      const req: BakeRequest = { id, key, form, resolution, ...opts };
+      if (withCoverage) {
+        const c = typeof coverage === 'function' ? await coverage() : coverage;
+        req.coverage = { data: c.data, w: c.w, h: c.h, px: c.px, x0: c.x0, y0: c.y0 };
+        this.sent.add(key);
+      }
+      return new Promise<BakeResponse>((resolve) => {
+        this.pending.set(id, { resolve });
+        this.worker.postMessage(req);
+      });
+    };
+    let res = await send(!this.sent.has(key));
+    // the worker keeps a few fields only; resend the shape once if it was evicted
+    if (!res.ok && res.error === 'Shape data missing') res = await send(true);
     if (!res.ok) {
       this.sent.delete(key);
       throw new Error(res.error ?? 'Baking failed');
