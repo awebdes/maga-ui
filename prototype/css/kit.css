@@ -1,0 +1,426 @@
+/* ============================================================
+   Kit — the component sheet. Same materials as the stage, laid flat.
+   ============================================================ */
+
+.kit-floor {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1.2px) 0 0 / 22px 22px, var(--ink-1);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 500ms var(--ease-out), visibility 0s linear 500ms;
+}
+.app[data-view="kit"] .kit-floor {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 500ms var(--ease-out), visibility 0s;
+}
+
+.kit {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-top: calc(96px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(24px);
+  transition: opacity 400ms var(--ease-out), transform 800ms var(--spring), visibility 0s linear 400ms;
+}
+.app[data-view="kit"] .kit {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 400ms var(--ease-out) 100ms, transform 800ms var(--spring) 100ms, visibility 0s;
+}
+
+.kit-inner {
+  max-width: 1160px;
+  margin: 0 auto;
+  display: grid;
+  gap: 64px;
+}
+
+.kit-hero {
+  display: grid;
+  gap: 14px;
+  max-width: 720px;
+}
+.kit-hero h1 {
+  margin: 0;
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.kit-hero h1 em {
+  font-style: normal;
+  color: var(--fg-3);
+}
+.kit-hero p {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--fg-2);
+  font-size: var(--fs-16);
+  line-height: 1.55;
+}
+.kit-rules {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.kit-rule {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 0 1px var(--line) inset;
+}
+.kit-rule b {
+  font-weight: 500;
+  font-size: var(--fs-14);
+}
+.kit-rule span {
+  color: var(--fg-3);
+  font-size: var(--fs-13);
+  line-height: 1.5;
+}
+
+.kit-sec {
+  display: grid;
+  gap: 18px;
+}
+.kit-sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 24px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.kit-sec-head h2 {
+  margin: 0;
+  font-size: var(--fs-20);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+.kit-sec-head p {
+  margin: 0;
+  color: var(--fg-3);
+  font-size: var(--fs-13);
+  max-width: 62ch;
+}
+
+.kit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 12px;
+}
+
+.spec {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: var(--r-xl);
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow: 0 0 0 1px var(--line) inset;
+}
+.spec.wide {
+  grid-column: 1 / -1;
+}
+.spec-stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 170px;
+  padding: 28px 18px;
+}
+.spec-stage.col {
+  flex-direction: column;
+}
+.spec-stage.dark {
+  isolation: isolate;
+  overflow: hidden;
+  margin: 6px;
+  border-radius: calc(var(--r-xl) - 6px);
+  background: radial-gradient(70% 70% at 50% 30%, #222226, #121214);
+}
+.spec-stage.dark > :not(.juice) {
+  position: relative;
+  z-index: 1;
+}
+.juice.local {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+.cluster .fs.stat,
+.cluster .pager,
+.cluster .select-btn,
+.cluster .tag,
+.cluster .cell.ghost,
+.cluster .tabs {
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+.spec-cap {
+  display: grid;
+  gap: 4px;
+  padding: 14px 18px 16px;
+  border-top: 1px solid var(--line);
+}
+.spec-cap .name {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--fs-13);
+  font-weight: 500;
+}
+.spec-cap .name .caps {
+  color: var(--fg-3);
+  font-weight: 400;
+}
+.spec-cap .note {
+  color: var(--fg-3);
+  font-size: var(--fs-12);
+  line-height: 1.5;
+}
+
+/* Foundations */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+.sw {
+  display: grid;
+  gap: 6px;
+}
+.sw i {
+  display: block;
+  height: 56px;
+  border-radius: var(--r-md);
+  box-shadow: 0 0 0 1px var(--line) inset;
+}
+.sw span {
+  color: var(--fg-3);
+  font-size: var(--fs-10);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.radii {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.radii div {
+  display: grid;
+  place-items: end start;
+  width: 64px;
+  height: 64px;
+  padding: 8px;
+  background: var(--cell);
+  box-shadow: 0 0 0 1px var(--line-strong) inset;
+  color: var(--fg-3);
+  font-size: var(--fs-10);
+}
+
+.curves {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+.curve {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+.curve-track {
+  position: relative;
+  height: 28px;
+  border-radius: var(--r-pill);
+  background: var(--cell);
+}
+.curve-track i {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--fg);
+  transform: translateX(0);
+}
+.curves.is-play .curve-track i {
+  transform: translateX(calc(var(--track-w, 200px) - 28px));
+}
+.curve span {
+  color: var(--fg-2);
+  font-size: var(--fs-11);
+}
+
+.type-scale {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+.type-scale div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.type-scale div > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.type-scale .caps,
+.type-scale .meta {
+  color: var(--fg-3);
+  flex: none;
+}
+
+/* Composition replica from the reference video */
+.cluster {
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  gap: 8px;
+  align-items: start;
+}
+.cluster .c-grid {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+.cluster .c-base {
+  grid-column: 2;
+  grid-row: 1;
+}
+.cluster .c-repeat {
+  grid-column: 2;
+  grid-row: 2;
+}
+.cluster .c-export {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: end;
+  margin-bottom: 26px;
+}
+.cluster .c-pattern {
+  grid-column: 3;
+  grid-row: 2;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.cluster .c-reset {
+  grid-column: 4;
+  grid-row: 2;
+}
+.cluster .juice-btn.cell {
+  height: 56px;
+  padding: 0 26px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-14);
+  font-weight: 400;
+  letter-spacing: var(--track-caps);
+}
+.cluster .select-btn {
+  width: 230px;
+}
+
+.inline-menu {
+  position: relative;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  filter: none;
+  width: 240px;
+}
+
+.kbd-list {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-width: 300px;
+}
+.kbd-list div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: var(--fg-2);
+  font-size: var(--fs-13);
+}
+
+@media (max-width: 720px) {
+  .kit {
+    padding-top: calc(32px + env(safe-area-inset-top, 0px));
+  }
+  .cluster {
+    grid-template-columns: auto auto;
+  }
+  .cluster .c-grid {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-items: start;
+  }
+  .cluster .c-base {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .cluster .c-export {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    margin: 0;
+  }
+  .cluster .c-repeat {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+  .cluster .c-pattern {
+    grid-column: 1;
+    grid-row: 4;
+  }
+  .cluster .c-reset {
+    grid-column: 2;
+    grid-row: 4;
+  }
+  .cluster .media {
+    width: 160px;
+  }
+  .cluster .select-btn {
+    width: 100%;
+  }
+  .cluster .pager {
+    width: 160px;
+    height: 160px;
+  }
+}

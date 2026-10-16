@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- @artifact-head -->
+<title>Maga UI Kit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Bagel+Fat+One&family=Titan+One&family=Rubik+Mono+One&family=Bungee&family=Shrikhand&family=Anton&family=Dela+Gothic+One&family=Chango&family=Unbounded:wght@800&display=swap">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/stage.css">
+<link rel="stylesheet" href="css/art.css">
+<link rel="stylesheet" href="css/kit.css">
+<!-- @artifact-head-end -->
+</head>
+<body>
+<!-- @artifact-body -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 19.5h14"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><path d="M8.8 8.6a3.3 3.3 0 1 1 4.6 3c-.9.4-1.4 1.1-1.4 2v.8"/><path d="M12 18.4v.1"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.4 2.6 3.6 5.4 3.6 8.5s-1.2 5.9-3.6 8.5c-2.4-2.6-3.6-5.4-3.6-8.5S9.6 6.1 12 3.5z"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M7 4v16M12 4v16M17 4v16"/><path d="M5 9h4M10 15h4M15 8h4"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M10 3.5l1.7 4.6 4.6 1.7-4.6 1.7L10 16.1l-1.7-4.6-4.6-1.7 4.6-1.7z"/><path d="M18 14l.8 2.1 2.1.8-2.1.8L18 19.8l-.8-2.1-2.1-.8 2.1-.8z"/></symbol>
+    <symbol id="i-v-single" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2.5"/></symbol>
+    <symbol id="i-v-slider" viewBox="0 0 24 24"><path d="M9 5H6.5A2.5 2.5 0 0 0 4 7.5v9A2.5 2.5 0 0 0 6.5 19H9M15 5h2.5A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5H15"/><path d="M12 3v18"/></symbol>
+    <symbol id="i-v-side" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2.5"/><path d="M12 5v14"/></symbol>
+    <symbol id="i-v-pip" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2.5"/><rect x="12" y="11" width="5.5" height="5" rx="1.2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+    <symbol id="i-motion" viewBox="0 0 24 24"><path d="M4 16c3 0 4-8 8-8s5 8 8 8"/></symbol>
+    <symbol id="i-focus" viewBox="0 0 24 24"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/><circle cx="12" cy="12" r="2.5"/></symbol>
+    <symbol id="i-type" viewBox="0 0 24 24"><path d="M5 6.5V5h14v1.5M12 5v14M9.5 19h5"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M3.5 16l4.5-4.5 4 4 2.5-2.5 6 6"/><circle cx="15.5" cy="9.5" r="1.5"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.8"/><rect x="13" y="4" width="7" height="7" rx="1.8"/><rect x="4" y="13" width="7" height="7" rx="1.8"/><rect x="13" y="13" width="7" height="7" rx="1.8"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12M11 11V5a1.5 1.5 0 0 1 3 0v6M14 11V6.5a1.5 1.5 0 0 1 3 0V14c0 3.6-2.4 6.5-6 6.5-2.4 0-3.8-1.1-5-3l-2-3.3a1.5 1.5 0 0 1 2.5-1.6L8 14"/></symbol>
+  </defs>
+</svg>
+
+<div class="app" id="app" data-view="stage" data-scene="type">
+
+  <!-- environment -->
+  <div class="env env-studio is-on" data-env="studio"></div>
+  <div class="env env-dusk" data-env="dusk"></div>
+  <div class="env env-void" data-env="void"></div>
+  <canvas class="env-grain" id="grain" aria-hidden="true"></canvas>
+
+  <!-- scenes -->
+  <section class="scene scene-type is-on" id="scene-type" aria-label="3D text">
+    <div class="t-bloom" aria-hidden="true"></div>
+    <div class="t-floor" aria-hidden="true"></div>
+    <div class="t-rig"><div class="t-squash"></div></div>
+  </section>
+
+  <section class="scene scene-enhance" id="scene-enhance" aria-label="Upscale compare">
+    <div class="cmp" data-mode="slider">
+      <div class="cmp-pane before"><canvas></canvas><span class="cmp-tag caps">Before</span></div>
+      <div class="cmp-pane after"><canvas></canvas><span class="cmp-tag caps">After</span></div>
+      <div class="cmp-scan" aria-hidden="true"></div>
+      <div class="cmp-divider"><i class="grip"></i></div>
+    </div>
+  </section>
+
+  <div class="kit-floor" aria-hidden="true"></div>
+  <div class="juice" aria-hidden="true"><i class="b2"></i><i class="b3"></i><i class="b1"></i></div>
+
+  <!-- chrome -->
+  <div class="chrome" id="chrome">
+
+    <!-- top left: brand + scene menu, view modes (enhance) -->
+    <div class="float tl">
+      <div class="island glass" style="position:relative">
+        <button class="cell clear brand" id="brand-btn" data-menu="scene-menu" aria-label="Switch scene">
+          <span class="logo" aria-hidden="true"><i style="--d:0"></i><i style="--d:1"></i><i style="--d:2"></i><i style="--d:3"></i><i style="--d:1"></i><i style="--d:2"></i><i style="--d:3"></i><i style="--d:4"></i><i style="--d:2"></i><i style="--d:3"></i><i style="--d:4"></i><i style="--d:5"></i></span>
+          <span class="brand-name" id="scene-name">Type</span>
+          <span class="caret" aria-hidden="true"></span>
+        </button>
+        <div class="menu below" id="scene-menu" style="width:250px">
+          <div class="menu-label caps">Scenes</div>
+          <button class="menu-item" role="menuitemradio" data-scene="type" aria-checked="true"><svg class="i"><use href="#i-type"/></svg><span>Type<span class="sub">3D lettering, materials</span></span><svg class="i i-sm check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+          <button class="menu-item" role="menuitemradio" data-scene="enhance" aria-checked="false"><svg class="i"><use href="#i-spark"/></svg><span>Enhance<span class="sub">Upscale with before / after</span></span><svg class="i i-sm check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" data-action="kit"><svg class="i"><use href="#i-grid"/></svg><span>Component kit</span><span class="kbd">K</span></button>
+        </div>
+      </div>
+      <div class="island glass" data-only="enhance">
+        <div class="seg icons" id="view-seg" aria-label="Compare view">
+          <button data-value="single" data-tip="Result only" data-kbd="1"><svg class="i"><use href="#i-v-single"/></svg></button>
+          <button data-value="slider" aria-checked="true" data-tip="Slider" data-kbd="2"><svg class="i"><use href="#i-v-slider"/></svg></button>
+          <button data-value="side" data-tip="Side by side" data-kbd="3"><svg class="i"><use href="#i-v-side"/></svg></button>
+          <button data-value="pip" data-tip="Picture in picture" data-kbd="4"><svg class="i"><use href="#i-v-pip"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- top right: help, export, account -->
+    <div class="float tr">
+      <div class="island glass">
+        <button class="cell icon-btn" id="help-btn" data-tip="Tour" data-kbd="?" aria-label="Start tour"><svg class="i i-lg"><use href="#i-help"/></svg></button>
+        <button class="cell icon-btn primary" id="export-btn" data-juice data-tip="Export PNG" data-kbd="E" aria-label="Export"><span class="progress"></span><svg class="i"><use href="#i-download"/></svg></button>
+      </div>
+      <div class="island glass" style="position:relative">
+        <button class="cell clear avatar-btn" data-menu="account-menu" aria-label="Settings" style="padding:0 8px 0 7px;gap:6px"><span class="avatar" aria-hidden="true"></span><svg class="i i-sm chev"><use href="#i-chev"/></svg></button>
+        <div class="menu below-end" id="account-menu" style="width:260px">
+          <div class="menu-label caps">Mira Nazarova</div>
+          <div class="menu-item" tabindex="-1"><svg class="i"><use href="#i-focus"/></svg><span>Focus mode<span class="sub">Chrome dims away from the cursor</span></span><span class="switch" id="sw-focus" aria-checked="true" aria-label="Focus mode" style="margin-left:auto"></span></div>
+          <div class="menu-item" tabindex="-1"><svg class="i"><use href="#i-motion"/></svg><span>Reduce motion</span><span class="switch" id="sw-motion" aria-checked="false" aria-label="Reduce motion" style="margin-left:auto"></span></div>
+          <div class="menu-sep"></div>
+          <button class="menu-item" data-action="hide"><svg class="i"><use href="#i-eye"/></svg><span>Hide interface</span><span class="kbd">H</span></button>
+          <button class="menu-item" data-action="tour"><svg class="i"><use href="#i-help"/></svg><span>Start tour</span><span class="kbd">?</span></button>
+          <button class="menu-item" data-action="kit"><svg class="i"><use href="#i-grid"/></svg><span>Component kit</span><span class="kbd">K</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- right middle: zoom (type) -->
+    <div class="float rm" data-only="type">
+      <div class="island glass zoom">
+        <button class="cell clear icon-btn" id="zoom-in" data-tip="Zoom in" aria-label="Zoom in"><svg class="i"><use href="#i-plus"/></svg></button>
+        <div class="fs vertical" id="fs-zoom" data-label="Zoom" data-min="40" data-max="200" data-value="100" data-format="pct"></div>
+        <button class="cell clear icon-btn" id="zoom-out" data-tip="Zoom out" aria-label="Zoom out"><svg class="i"><use href="#i-minus"/></svg></button>
+      </div>
+    </div>
+
+    <!-- bottom left: material (type) / image stack (enhance) -->
+    <div class="float bl">
+      <div data-only="type" style="position:relative">
+        <div class="panels" id="mat-panels">
+          <div class="panel mat" id="mat-panel" role="dialog" aria-label="Materials">
+            <div class="panel-head">
+              <div class="panel-title" aria-live="polite"><span id="mat-name">Sorbet</span></div>
+              <button class="cell clear icon-btn panel-close" data-close="mat-panels" aria-label="Close materials"><svg class="i"><use href="#i-close"/></svg></button>
+            </div>
+            <div class="panel-body" id="mat-body"></div>
+          </div>
+          <div class="panel props" id="props-panel" role="dialog" aria-label="Material properties">
+            <div class="panel-head">
+              <div class="panel-title"><span>Properties</span></div>
+              <button class="cell clear icon-btn panel-close" data-close="mat-panels" aria-label="Close properties"><svg class="i"><use href="#i-close"/></svg></button>
+            </div>
+            <div class="panel-body">
+              <div class="panel-section-label caps">Dynamic</div>
+              <div class="stack">
+                <div class="fs lg" data-prop="tile" data-label="Tile" data-value="30"></div>
+                <div class="fs lg" data-prop="color" data-label="Color" data-value="0" data-default="0"></div>
+                <div class="fs lg" data-prop="direction" data-label="Direction" data-value="50"></div>
+              </div>
+              <div class="panel-section-label caps">Appearance</div>
+              <div class="stack">
+                <div class="fs lg" data-prop="metal" data-label="Metalness" data-value="30"></div>
+                <div class="fs lg" data-prop="rough" data-label="Roughness" data-value="45"></div>
+              </div>
+              <div class="panel-section-label caps">Environment</div>
+              <div class="stack">
+                <div class="fs lg" data-prop="power" data-label="Power" data-value="60"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="island glass">
+          <button class="cell clear mat-btn" id="mat-btn" aria-expanded="false" aria-controls="mat-panels" data-tip="Materials" data-kbd="M" aria-label="Materials"><span class="sphere" id="mat-btn-sphere"></span></button>
+        </div>
+      </div>
+      <div data-only="enhance" style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+        <div class="thumbs" id="thumbs" role="radiogroup" aria-label="Source image"></div>
+        <div class="island glass">
+          <button class="cell icon-btn" id="add-image" data-tip="Open your image" aria-label="Open your image"><svg class="i"><use href="#i-plus"/></svg></button>
+          <input type="file" id="add-image-file" accept="image/*" hidden>
+        </div>
+      </div>
+    </div>
+
+    <!-- bottom center: dock -->
+    <div class="float bc">
+      <div class="island glass dock" data-only="type" id="dock-type">
+        <label class="sr-only" for="t-text">Text</label>
+        <input class="field hero" id="t-text" value="Peace" maxlength="14" autocomplete="off" spellcheck="false">
+        <div class="fs" id="fs-depth" data-label="Depth" data-value="40"></div>
+        <div class="fs" id="fs-spacing" data-label="Spacing" data-value="30"></div>
+        <div style="position:relative">
+          <button class="cell aa" id="font-btn" aria-expanded="false" aria-controls="font-pop" data-tip="Font" data-kbd="F" aria-label="Font">Aa</button>
+          <div class="menu above-center" id="font-pop" role="dialog" aria-label="Fonts" style="padding:8px">
+            <div class="font-grid" id="font-grid" role="radiogroup" aria-label="Font"></div>
+            <div class="font-grid-name caps" id="font-name">Bagel</div>
+          </div>
+        </div>
+      </div>
+
+      <div data-only="enhance" class="enh-stack" style="display:flex;flex-direction:column;gap:8px;width:max-content;max-width:calc(100vw - 24px)">
+        <div class="prompt glass" id="prompt">
+          <label class="sr-only" for="prompt-main">Prompt</label>
+          <textarea class="field" id="prompt-main" rows="2" maxlength="400"></textarea>
+          <div class="neg"><div><label class="sr-only" for="prompt-neg">Negative prompt</label><textarea class="field" id="prompt-neg" rows="1" maxlength="400" placeholder="Blur, watermark, oversharpened edges"></textarea></div></div>
+          <div class="prompt-row">
+            <button class="cell sm neg-toggle">Add Negative Prompt</button>
+            <span class="prompt-count mono"></span>
+          </div>
+        </div>
+        <div class="island glass dock dock-enh">
+          <div class="seg lg" id="scale-seg" aria-label="Upscale factor">
+            <button data-value="2" aria-checked="true">2x</button>
+            <button data-value="4">4x</button>
+            <button data-value="8">8x</button>
+            <button data-value="16">16x</button>
+          </div>
+          <div style="position:relative">
+            <button class="cell icon-btn" id="adv-btn" aria-expanded="false" aria-controls="adv-pop" data-tip="Advanced" aria-label="Advanced settings"><svg class="i"><use href="#i-sliders"/></svg></button>
+            <div class="menu above" id="adv-pop" role="dialog" aria-label="Advanced" style="width:240px;padding:10px">
+              <div style="display:grid;gap:8px">
+                <div class="fs split" id="fs-creativity" data-label="Creativity" data-value="35" data-format="pct"></div>
+                <div class="fs split" id="fs-detail" data-label="Detail" data-value="70" data-format="pct"></div>
+                <div class="menu-item" style="padding:0 6px 0 10px"><span>Face restore</span><span class="switch" id="sw-face" aria-checked="true" aria-label="Face restore" style="margin-left:auto"></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="fs split" id="fs-strength" data-label="Strength" data-value="50" data-format="pct"></div>
+          <button class="cell icon-btn" id="style-btn" data-tip="Style reference" aria-label="Cycle style reference" style="padding:0;overflow:hidden"><span class="avatar" style="width:32px;height:32px;border-radius:9px;box-shadow:none"></span></button>
+          <button class="cell primary lg" id="enhance-btn" data-juice><span class="progress"></span><svg class="i"><use href="#i-spark"/></svg><span class="lbl">Enhance</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- bottom right: environment + orbit (type) -->
+    <div class="float br" data-only="type">
+      <div class="island glass">
+        <button class="cell icon-btn env-thumb" id="env-btn" data-tip="Lighting: Studio" aria-label="Change lighting"><span class="studio is-on"></span><span class="dusk"></span><span class="void"></span></button>
+        <button class="cell icon-btn lg" id="orbit-btn" aria-pressed="false" data-tip="Auto orbit" data-kbd="O" aria-label="Auto orbit"><svg class="i i-lg"><use href="#i-globe"/></svg></button>
+      </div>
+    </div>
+
+    <!-- onboarding -->
+    <div class="coach-wrap" id="coach-wrap">
+      <div class="coach glass" role="dialog" aria-label="Tour" aria-live="polite">
+        <div class="coach-head">
+          <div class="dots" id="coach-dots"></div>
+          <button class="cell clear icon-btn coach-close" id="coach-close" aria-label="Close tour"><svg class="i"><use href="#i-close"/></svg></button>
+        </div>
+        <div class="coach-body" id="coach-body"></div>
+        <div class="coach-foot">
+          <button class="cell sm clear" id="coach-back">Back</button>
+          <span class="caps" id="coach-count" style="color:var(--fg-4)"></span>
+          <button class="cell sm ghost" id="coach-next">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spot" id="spot" aria-hidden="true"></div>
+
+  <!-- KIT -->
+  <main class="kit" id="kit" aria-label="Component kit">
+    <div class="kit-inner">
+
+      <header class="kit-hero">
+        <span class="caps" style="color:var(--fg-3)">Maga UI · v0.1 prototype</span>
+        <h1>Quiet chrome, <em>loud object.</em></h1>
+        <p>Components for interfaces where one thing on screen matters and everything else serves it. Controls live in small glass islands at the edges, step back when you stop moving, and answer every touch with motion.</p>
+        <div class="kit-rules">
+          <div class="kit-rule"><b>One focal object</b><span>The center owns color and motion. Chrome stays grey until you touch it.</span></div>
+          <div class="kit-rule"><b>Chrome is glass</b><span>Islands blur what is behind them, so light from the object and the bloom tints them.</span></div>
+          <div class="kit-rule"><b>Every touch answers</b><span>Press scales down, release springs back, overdrag rubber-bands. Nothing snaps without easing.</span></div>
+        </div>
+      </header>
+
+      <!-- Composition -->
+      <section class="kit-sec">
+        <div class="kit-sec-head"><h2>Composition</h2><p>The cluster from the reference video, rebuilt from kit parts. Hover Export to charge it.</p></div>
+        <div class="kit-grid">
+          <div class="spec wide">
+            <div class="spec-stage dark" style="min-height:420px">
+              <div class="cluster">
+                <div class="c-grid">
+                  <div class="fs stat" data-label="Grid size" data-value="72" data-default="50" data-format="stat" style="width:230px"></div>
+                  <button class="tag" data-toggle>#tag</button>
+                </div>
+                <div class="c-base">
+                  <div class="media" id="kit-media">
+                    <div class="media-bg"></div>
+                    <img class="media-img" alt="">
+                    <span class="media-label caps">Base</span>
+                    <span class="media-add" aria-hidden="true"><svg class="i"><use href="#i-plus"/></svg></span>
+                    <div class="media-meta caps"><span class="name">EXAMPLE.PNG</span><span class="size">543.12 KB</span></div>
+                  </div>
+                </div>
+                <div class="c-export"><button class="cell primary pill" data-juice>Export</button></div>
+                <div class="c-repeat">
+                  <div class="select">
+                    <button class="cell select-btn"><span class="select-value">Repeat</span><span class="caret" aria-hidden="true"></span></button>
+                    <div class="menu below">
+                      <button class="menu-item" data-value="repeat" aria-checked="true">Repeat</button>
+                      <button class="menu-item" data-value="mirror">Mirror</button>
+                      <button class="menu-item" data-value="clamp">Clamp</button>
+                      <button class="menu-item" data-value="none" data-label="No repeat">No repeat</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="c-pattern">
+                  <div class="pager">
+                    <span class="caps" style="color:var(--fg-2)">Pattern</span>
+                    <div class="pager-stage"></div>
+                    <div class="pager-foot"><span class="odo mono caps"></span><button class="cell clear icon-btn pager-next" aria-label="Next pattern"><svg class="i i-sm"><use href="#i-arrow"/></svg></button></div>
+                  </div>
+                  <div class="tabs"><button aria-selected="true">Text</button><button>SVG</button></div>
+                </div>
+                <div class="c-reset"><button class="cell ghost pill caps" id="kit-reset">Reset</button></div>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Pattern editor cluster <span class="caps">8 components</span></div><div class="note">Drag Grid size. Click or drop an image on Base. Swipe the pattern. Reset returns every value with a spring.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Foundations -->
+      <section class="kit-sec">
+        <div class="kit-sec-head"><h2>Foundations</h2><p>Dark-only. Grey does the work; the two juice colors appear only on the hero action and its bloom.</p></div>
+        <div class="kit-grid">
+          <div class="spec">
+            <div class="spec-stage">
+              <div class="swatches mono">
+                <div class="sw"><i style="background:var(--ink-0)"></i><span>ink-0 · stage</span></div>
+                <div class="sw"><i style="background:var(--ink-1)"></i><span>ink-1 · page</span></div>
+                <div class="sw"><i style="background:var(--ink-2)"></i><span>ink-2 · raised</span></div>
+                <div class="sw"><i style="background:var(--glass)"></i><span>glass · 66%</span></div>
+                <div class="sw"><i style="background:var(--cell)"></i><span>cell · 5.5%</span></div>
+                <div class="sw"><i style="background:var(--fill-hot)"></i><span>fill · 20%</span></div>
+                <div class="sw"><i style="background:var(--fg)"></i><span>fg</span></div>
+                <div class="sw"><i style="background:var(--juice-a)"></i><span>juice-a</span></div>
+                <div class="sw"><i style="background:var(--juice-warm)"></i><span>juice-warm</span></div>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Color <span class="caps">9 tokens</span></div><div class="note">Surfaces are white at low alpha, so they pick up whatever glows behind them.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage">
+              <div class="type-scale">
+                <div><span style="font-size:28px;letter-spacing:-.02em">Geist 28</span><span class="caps">Value</span></div>
+                <div><span style="font-size:16px;font-weight:500">Geist 16 Medium</span><span class="caps">Title</span></div>
+                <div><span style="font-size:13px;font-weight:500">Geist 13 Medium</span><span class="caps">Control</span></div>
+                <div><span style="font-size:13px;color:var(--fg-3)">Geist 13 · 40% white</span><span class="caps">Body</span></div>
+                <div><span class="caps" style="color:var(--fg)">Geist Mono 11 caps</span><span class="caps">Label</span></div>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Type <span class="caps">Geist + Geist Mono</span></div><div class="note">Mono caps for labels and numbers, Geist for everything you read. Numbers are tabular.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage col">
+              <div class="radii mono">
+                <div style="border-radius:var(--r-sm)">10</div>
+                <div style="border-radius:var(--r-md)">14</div>
+                <div style="border-radius:var(--r-lg)">20</div>
+                <div style="border-radius:var(--r-xl)">26</div>
+                <div style="border-radius:999px;place-items:center">pill</div>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Radius <span class="caps">nested = outer − gap</span></div><div class="note">Island radius is the cell radius plus the 6px island padding, so curves stay concentric.</div></div>
+          </div>
+          <div class="spec wide">
+            <div class="spec-stage col">
+              <div class="curves" id="curves" style="max-width:720px">
+                <div class="curve"><span class="caps">Spring · 560</span><div class="curve-track"><i style="transition:transform 560ms var(--spring)"></i></div></div>
+                <div class="curve"><span class="caps">Bounce · 560</span><div class="curve-track"><i style="transition:transform 560ms var(--spring-bounce)"></i></div></div>
+                <div class="curve"><span class="caps">Ease out · 200</span><div class="curve-track"><i style="transition:transform 200ms var(--ease-out)"></i></div></div>
+                <div class="curve"><span class="caps">Press · 110</span><div class="curve-track"><i style="transition:transform 110ms var(--ease-out)"></i></div></div>
+              </div>
+              <button class="cell sm" id="curves-play">Play curves</button>
+            </div>
+            <div class="spec-cap"><div class="name">Motion <span class="caps">4 curves</span></div><div class="note">Springs for anything that moves in space, ease-out for color and opacity, 110ms for press.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Buttons -->
+      <section class="kit-sec">
+        <div class="kit-sec-head"><h2>Buttons</h2><p>One light button per screen at most. The juice variant is for the action the whole screen exists for.</p></div>
+        <div class="kit-grid">
+          <div class="spec">
+            <div class="spec-stage dark">
+              <button class="cell primary lg" id="kit-busy" data-juice><span class="progress"></span><svg class="i"><use href="#i-spark"/></svg><span class="lbl">Enhance</span></button>
+              <button class="cell primary pill lg" data-juice>Export</button>
+            </div>
+            <div class="spec-cap"><div class="name">Juice <span class="caps">hero action</span></div><div class="note">Hover charges it blue and lights the bloom behind nearby glass. Click Enhance to see the busy state: progress fills the button and the width stays put.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage">
+              <button class="cell primary">Save</button>
+              <button class="cell">Duplicate</button>
+              <button class="cell ghost pill caps">Reset</button>
+              <button class="cell clear">Cancel</button>
+            </div>
+            <div class="spec-cap"><div class="name">Primary · Cell · Ghost · Clear</div><div class="note">Cell is the default. Ghost for reversible actions, Clear inside islands that already have a fill.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage">
+              <div class="island glass">
+                <button class="cell icon-btn" data-tip="Tour" data-kbd="?" aria-label="Tour"><svg class="i i-lg"><use href="#i-help"/></svg></button>
+                <button class="cell icon-btn" aria-pressed="true" data-tip="Auto orbit · on" aria-label="Auto orbit"><svg class="i"><use href="#i-globe"/></svg></button>
+                <button class="cell icon-btn" disabled aria-label="Disabled"><svg class="i"><use href="#i-sliders"/></svg></button>
+                <button class="cell icon-btn primary" data-juice data-tip="Export" aria-label="Export"><svg class="i"><use href="#i-download"/></svg></button>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Icon buttons <span class="caps">rest · on · disabled · juice</span></div><div class="note">40px square, 14px radius. Every icon button has a tooltip with its shortcut.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Selection -->
+      <section class="kit-sec">
+        <div class="kit-sec-head"><h2>Selection</h2><p>The indicator travels on a spring and stretches to the next width. Arrow keys move it.</p></div>
+        <div class="kit-grid">
+          <div class="spec">
+            <div class="spec-stage col">
+              <div class="seg lg"><button data-value="2" aria-checked="true">2x</button><button data-value="4">4x</button><button data-value="8">8x</button><button data-value="16">16x</button></div>
+              <div class="seg"><button aria-checked="true">Day</button><button>Week</button><button>Month</button><button>Year</button></div>
+            </div>
+            <div class="spec-cap"><div class="name">Segmented</div><div class="note">Use for 2–5 mutually exclusive values that change the view immediately.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage col">
+              <div class="island glass">
+                <div class="seg icons">
+                  <button data-tip="Result only" aria-label="Result only"><svg class="i"><use href="#i-v-single"/></svg></button>
+                  <button aria-checked="true" data-tip="Slider" aria-label="Slider"><svg class="i"><use href="#i-v-slider"/></svg></button>
+                  <button data-tip="Side by side" aria-label="Side by side"><svg class="i"><use href="#i-v-side"/></svg></button>
+                  <button data-tip="Picture in picture" aria-label="Picture in picture"><svg class="i"><use href="#i-v-pip"/></svg></button>
+                </div>
+              </div>
+              <div class="tabs"><button aria-selected="true">Text</button><button>SVG</button><button>JSON</button></div>
+            </div>
+            <div class="spec-cap"><div class="name">Icon segmented · Tabs</div><div class="note">Tabs underline the label width only. Use tabs for content, segmented for modes.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage col" style="gap:14px">
+              <div style="display:flex;gap:14px;align-items:center"><span class="switch" tabindex="0" aria-checked="true" aria-label="Focus mode"></span><span style="color:var(--fg-2)">Focus mode</span></div>
+              <div style="display:flex;gap:14px;align-items:center"><span class="switch" tabindex="0" aria-checked="false" aria-label="Snap to grid"></span><span style="color:var(--fg-2)">Snap to grid</span></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+                <button class="tag" data-toggle aria-pressed="true">#tag</button><button class="tag" data-toggle>#grain</button><button class="tag" data-toggle>#dusk</button><button class="tag" data-toggle>#35mm</button>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Switch · Tags</div><div class="note">Hold a switch to see the knob stretch. Tags toggle to a light fill.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sliders -->
+      <section class="kit-sec">
+        <div class="kit-sec-head"><h2>Fill sliders</h2><p>The whole cell is the control. Tap to jump, drag to nudge from where it is, Shift for fine steps, double-click to reset. Pull past the end and it stretches.</p></div>
+        <div class="kit-grid">
+          <div class="spec">
+            <div class="spec-stage col">
+              <div class="island glass"><div class="fs" data-label="Depth" data-value="40" style="height:48px;min-width:150px"></div><div class="fs" data-label="Spacing" data-value="30" style="height:48px;min-width:150px"></div></div>
+            </div>
+            <div class="spec-cap"><div class="name">Center label</div><div class="note">Label swaps to the value on hover and drag. For docks where width is tight.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage col">
+              <div class="fs split" data-label="Strength" data-value="50" data-format="pct" style="width:200px"></div>
+              <div class="fs split" data-label="Creativity" data-value="35" data-format="pct" style="width:200px"></div>
+            </div>
+            <div class="spec-cap"><div class="name">Split label</div><div class="note">Label left, value right, always visible. For settings people compare at a glance.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage">
+              <div class="fs stat" data-label="Grid size" data-value="72" data-default="50" data-format="stat" style="width:240px"></div>
+            </div>
+            <div class="spec-cap"><div class="name">Stat</div><div class="note">The fill doubles as the progress of the number. Snaps to the default as you pass it.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage col" style="max-width:300px;margin:0 auto;width:100%">
+              <div class="fs lg" data-label="Roughness" data-value="45"></div>
+              <div class="fs lg" data-label="Power" data-value="70"></div>
+            </div>
+            <div class="spec-cap"><div class="name">Large</div><div class="note">56px rows for property panels. Section labels in mono caps between groups.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage">
+              <div class="island glass zoom">
+                <button class="cell clear icon-btn" aria-label="Zoom in"><svg class="i"><use href="#i-plus"/></svg></button>
+                <div class="fs vertical" data-label="Zoom" data-min="40" data-max="200" data-value="100" data-format="pct"></div>
+                <button class="cell clear icon-btn" aria-label="Zoom out"><svg class="i"><use href="#i-minus"/></svg></button>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Vertical</div><div class="note">Zoom column. Fills from the bottom, value appears on hover.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage dark">
+              <div class="island glass">
+                <div class="seg"><button data-value="2" aria-checked="true">2x</button><button data-value="4">4x</button><button data-value="8">8x</button></div>
+                <div class="fs split" data-label="Strength" data-value="50" data-format="pct" style="width:150px"></div>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">In a dock</div><div class="note">Segmented and slider share one island and one height. Gaps are 6px everywhere.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Inputs -->
+      <section class="kit-sec">
+        <div class="kit-sec-head"><h2>Inputs</h2><p>Fields sit flush in cells and darken on focus instead of growing a border.</p></div>
+        <div class="kit-grid">
+          <div class="spec">
+            <div class="spec-stage col">
+              <div class="select">
+                <button class="cell select-btn"><span class="select-value">Repeat</span><span class="caret" aria-hidden="true"></span></button>
+                <div class="menu below">
+                  <button class="menu-item" data-value="repeat" aria-checked="true">Repeat</button>
+                  <button class="menu-item" data-value="mirror">Mirror</button>
+                  <button class="menu-item" data-value="clamp">Clamp</button>
+                </div>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Select</div><div class="note">Menu grows from the trigger. The highlight slides between items instead of blinking.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage">
+              <div class="island glass" style="width:260px"><label class="sr-only" for="kit-text">Text</label><input class="field hero" id="kit-text" value="Peace" spellcheck="false"></div>
+            </div>
+            <div class="spec-cap"><div class="name">Hero field</div><div class="note">The editable name of the object. Centered, 22px, sits in the dock.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage">
+              <div class="prompt glass" style="max-width:420px">
+                <label class="sr-only" for="kit-prompt">Prompt</label>
+                <textarea class="field" id="kit-prompt" rows="2">Glacial valley at first light, cold mist between pine ridges, pale blue sky</textarea>
+                <div class="neg"><div><label class="sr-only" for="kit-neg">Negative prompt</label><textarea class="field" id="kit-neg" rows="1" placeholder="Blur, watermark, oversharpened edges"></textarea></div></div>
+                <div class="prompt-row"><button class="cell sm neg-toggle">Add Negative Prompt</button><span class="prompt-count mono"></span></div>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Prompt card</div><div class="note">Grows with text up to 140px. Negative prompt unfolds under it in a warm tint.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cards -->
+      <section class="kit-sec">
+        <div class="kit-sec-head"><h2>Cards and pickers</h2><p>Visual choices show the result, not a name. Highlights follow the pointer.</p></div>
+        <div class="kit-grid">
+          <div class="spec">
+            <div class="spec-stage dark">
+              <div class="media" style="width:200px">
+                <div class="media-bg"></div>
+                <img class="media-img" alt="">
+                <span class="media-label caps">Base</span>
+                <span class="media-add" aria-hidden="true"><svg class="i"><use href="#i-plus"/></svg></span>
+                <div class="media-meta caps"><span class="name">EXAMPLE.PNG</span><span class="size">543.12 KB</span></div>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Media tile</div><div class="note">Click or drop an image. The empty state is a slow-moving gradient, never a grey box.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage">
+              <div class="pager">
+                <span class="caps" style="color:var(--fg-2)">Pattern</span>
+                <div class="pager-stage"></div>
+                <div class="pager-foot"><span class="odo mono caps"></span><button class="cell clear icon-btn pager-next" aria-label="Next pattern"><svg class="i i-sm"><use href="#i-arrow"/></svg></button></div>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Pager</div><div class="note">Swipe or tap the arrow. The counter rolls like an odometer.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage">
+              <div class="swatch-grid" id="kit-swatches" style="width:100%;max-width:280px;padding:0"></div>
+            </div>
+            <div class="spec-cap"><div class="name">Material swatch</div><div class="note">The specular highlight tracks the pointer across the sphere.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Overlays -->
+      <section class="kit-sec">
+        <div class="kit-sec-head"><h2>Overlays</h2><p>Menus, tooltips, toasts and the tour card. All enter with scale, blur and a spring.</p></div>
+        <div class="kit-grid">
+          <div class="spec">
+            <div class="spec-stage">
+              <div class="menu inline-menu" id="kit-menu">
+                <div class="menu-label caps">Scenes</div>
+                <button class="menu-item"><svg class="i"><use href="#i-type"/></svg><span>Type<span class="sub">3D lettering, materials</span></span></button>
+                <button class="menu-item"><svg class="i"><use href="#i-spark"/></svg><span>Enhance<span class="sub">Upscale with before / after</span></span></button>
+                <div class="menu-sep"></div>
+                <button class="menu-item"><svg class="i"><use href="#i-grid"/></svg><span>Component kit</span><span class="kbd">K</span></button>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Menu</div><div class="note">Glass at 86%. Sections in mono caps, shortcuts on the right.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage col">
+              <div class="island glass">
+                <button class="cell icon-btn" data-tip="Zoom in" data-kbd="+" aria-label="Zoom in"><svg class="i"><use href="#i-plus"/></svg></button>
+                <button class="cell icon-btn" data-tip="Zoom out" data-kbd="−" aria-label="Zoom out"><svg class="i"><use href="#i-minus"/></svg></button>
+                <button class="cell icon-btn" data-tip="Auto orbit" data-kbd="O" aria-label="Auto orbit"><svg class="i"><use href="#i-globe"/></svg></button>
+              </div>
+              <button class="cell sm" id="kit-toast">Show toast</button>
+            </div>
+            <div class="spec-cap"><div class="name">Tooltip · Toast</div><div class="note">First tooltip waits 520ms, the next ones show instantly while you scan the row.</div></div>
+          </div>
+          <div class="spec">
+            <div class="spec-stage">
+              <div class="kbd-list">
+                <div><span>Tour</span><span class="kbd">?</span></div>
+                <div><span>Hide interface</span><span class="kbd">H</span></div>
+                <div><span>Stage / Kit</span><span class="kbd">K</span></div>
+                <div><span>Materials · Fonts</span><span><span class="kbd">M</span> <span class="kbd">F</span></span></div>
+                <div><span>Auto orbit · Export</span><span><span class="kbd">O</span> <span class="kbd">E</span></span></div>
+                <div><span>Compare views</span><span class="kbd">1–4</span></div>
+              </div>
+            </div>
+            <div class="spec-cap"><div class="name">Shortcuts</div><div class="note">Every frequent action has one key. Shown in tooltips and menus.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="caps" style="color:var(--fg-4);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <span>Maga UI prototype · HTML, CSS, vanilla JS</span>
+        <span>Export and Enhance are simulated · images are generated in the browser</span>
+      </footer>
+    </div>
+  </main>
+</div>
+
+<!-- view switcher -->
+<div class="switcher glass" id="switcher">
+  <div class="seg" id="view-switch" aria-label="View">
+    <button data-value="stage" aria-checked="true">Stage</button>
+    <button data-value="kit">Kit</button>
+  </div>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/components.js"></script>
+<script src="js/scene-type.js"></script>
+<script src="js/scene-enhance.js"></script>
+<script src="js/app.js"></script>
+<!-- @artifact-body-end -->
+</body>
+</html>

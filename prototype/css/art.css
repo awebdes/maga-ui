@@ -1,0 +1,271 @@
+/* ============================================================
+   Small extras: pill cells, tour illustrations
+   ============================================================ */
+
+.cell.pill {
+  border-radius: var(--r-pill);
+}
+
+/* ---------- tour illustrations (inside .coach-art) ---------- */
+
+.art {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.art::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 70% at 50% 40%, rgba(255, 255, 255, 0.06), transparent 70%);
+}
+
+/* 1 — type + sliders */
+.art-type .word {
+  position: relative;
+  display: grid;
+  font-family: "Bagel Fat One", var(--font-ui);
+  font-size: 64px;
+  line-height: 1;
+  margin-top: -26px;
+  animation: art-tilt 4s var(--ease-in-out) infinite alternate;
+}
+.art-type .word span {
+  grid-area: 1 / 1;
+}
+.art-type .word .back {
+  color: #7a3f8f;
+  text-shadow: 1px 1px 0 #6a3580, 2px 2px 0 #5d2d72, 3px 3px 0 #512665, 4px 4px 0 #451f58, 5px 5px 0 #3a194b,
+    6px 6px 0 #2f143e, 8px 10px 16px rgba(0, 0, 0, 0.6);
+}
+.art-type .word .face {
+  color: transparent;
+  background: linear-gradient(115deg, #ff7ad9, #8f9bff 35%, #ffb07a 65%, #ff6fc8);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.art-type .bars {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  transform: translateX(-50%);
+  background: rgba(40, 40, 44, 0.8);
+  box-shadow: 0 0 0 1px var(--line) inset;
+}
+.art-type .bars i {
+  position: relative;
+  width: 70px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--cell);
+  overflow: hidden;
+}
+.art-type .bars i::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: var(--w);
+  background: var(--fill-hot);
+  animation: art-fill 3.2s var(--ease-in-out) infinite alternate;
+}
+.art-type .bars i:nth-child(2)::before {
+  animation-delay: -1.4s;
+}
+@keyframes art-fill {
+  to {
+    width: calc(var(--w) + 30%);
+  }
+}
+@keyframes art-tilt {
+  from {
+    transform: perspective(400px) rotateY(-14deg) rotateX(6deg);
+  }
+  to {
+    transform: perspective(400px) rotateY(14deg) rotateX(-4deg);
+  }
+}
+
+/* 2 — fonts */
+.art-fonts {
+  background: linear-gradient(120deg, #2f8a2a, #6fd23f 40%, #1f5c1a);
+}
+.art-fonts .sheet {
+  display: grid;
+  grid-template-columns: repeat(3, 34px);
+  gap: 3px;
+  padding: 5px;
+  border-radius: 10px;
+  background: rgba(24, 24, 27, 0.92);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
+  transform: translateY(18px);
+}
+.art-fonts .sheet span {
+  display: grid;
+  place-items: center;
+  height: 30px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg-2);
+  font-size: 15px;
+}
+.art-fonts .sheet span.on {
+  color: var(--fg);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+  animation: art-pick 2.4s var(--ease-in-out) infinite;
+}
+@keyframes art-pick {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+/* 3 — materials */
+.art-mats .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.art-mats .sphere {
+  width: 38px;
+  animation: art-bob 2.8s var(--ease-in-out) infinite alternate;
+}
+.art-mats .sphere:nth-child(2) {
+  width: 50px;
+  animation-delay: -0.5s;
+}
+.art-mats .sphere:nth-child(3) {
+  width: 70px;
+  animation-delay: -1s;
+}
+.art-mats .sphere:nth-child(4) {
+  width: 50px;
+  animation-delay: -1.5s;
+}
+.art-mats .sphere:nth-child(5) {
+  animation-delay: -2s;
+}
+@keyframes art-bob {
+  to {
+    transform: translateY(-8px);
+  }
+}
+
+/* 4 — grab */
+.art-grab .word {
+  font-family: "Bagel Fat One", var(--font-ui);
+  font-size: 46px;
+  color: transparent;
+  background: linear-gradient(115deg, #ff7ad9, #8f9bff 35%, #ffb07a 65%, #ff6fc8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: art-spin 3s var(--spring) infinite;
+}
+.art-grab .hand {
+  position: absolute;
+  left: 58%;
+  top: 56%;
+  width: 34px;
+  height: 34px;
+  color: #fff;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+  animation: art-hand 3s var(--ease-in-out) infinite;
+}
+.art-grab .hand .i {
+  width: 34px;
+  height: 34px;
+  fill: rgba(20, 20, 24, 0.9);
+}
+@keyframes art-spin {
+  0%,
+  10% {
+    transform: perspective(300px) rotateY(0deg);
+  }
+  45% {
+    transform: perspective(300px) rotateY(38deg);
+  }
+  100% {
+    transform: perspective(300px) rotateY(0deg);
+  }
+}
+@keyframes art-hand {
+  0%,
+  10% {
+    transform: translate(-30px, 0);
+  }
+  45% {
+    transform: translate(30px, 0);
+    opacity: 1;
+  }
+  60%,
+  100% {
+    transform: translate(30px, 6px);
+    opacity: 0;
+  }
+}
+
+/* 5 — export / juice */
+.art-juice .blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(26px);
+  animation: art-orbit 5s var(--ease-in-out) infinite alternate;
+}
+.art-juice .blob.a {
+  width: 120px;
+  height: 90px;
+  left: 42%;
+  top: 34%;
+  background: rgba(31, 139, 255, 0.9);
+}
+.art-juice .blob.b {
+  width: 90px;
+  height: 90px;
+  left: 64%;
+  top: 10%;
+  background: rgba(255, 79, 110, 0.7);
+  animation-delay: -2s;
+}
+.art-juice .slab {
+  position: absolute;
+  left: 14%;
+  top: 22%;
+  width: 34%;
+  height: 56%;
+  border-radius: 14px;
+  background: rgba(34, 34, 38, 0.55);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 0 1px var(--line) inset;
+}
+.art-juice .btn {
+  position: relative;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: radial-gradient(120% 140% at 50% 120%, var(--juice-b), var(--juice-a) 55%, #1672e6);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: var(--track-caps);
+  box-shadow: 0 10px 30px -6px rgba(31, 139, 255, 0.8);
+  margin-left: 30%;
+}
+@keyframes art-orbit {
+  to {
+    transform: translate(-20px, 14px) scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .art * {
+    animation: none !important;
+  }
+}
+.reduce-motion .art * {
+  animation: none !important;
+}

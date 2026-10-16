@@ -1,0 +1,887 @@
+/* ============================================================
+   Stage — the focal object owns the viewport; chrome floats.
+   z-order: env (0) → scene (1) → kit floor (2) → juice bloom (5) → chrome (10) → kit (20) → switcher (30)
+   ============================================================ */
+
+.app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ---------- Environment (stage lighting) ---------- */
+
+.env {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 900ms var(--ease-out);
+}
+.env.is-on {
+  opacity: 1;
+}
+.env-studio {
+  background: radial-gradient(70% 55% at 50% 38%, #262629 0%, #1a1a1c 45%, #111113 100%);
+}
+.env-dusk {
+  background: radial-gradient(60% 50% at 50% 30%, #2d2340 0%, #1a1424 50%, #0d0a12 100%);
+}
+.env-void {
+  background: #050506;
+}
+.env-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.06;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+/* ---------- Scenes ---------- */
+
+.scene {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(1.04);
+  filter: blur(10px);
+  transition: opacity 600ms var(--ease-out), transform var(--t-scene) var(--spring), filter 600ms var(--ease-out),
+    visibility 0s linear 600ms;
+}
+.scene.is-on {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  filter: none;
+  transition: opacity 600ms var(--ease-out) 120ms, transform var(--t-scene) var(--spring) 120ms,
+    filter 600ms var(--ease-out) 120ms, visibility 0s;
+}
+.app[data-view="kit"] .scene {
+  opacity: 0;
+  transform: scale(0.96);
+  filter: blur(14px);
+}
+
+/* ---------- Type scene ---------- */
+
+.scene-type {
+  --t-size: clamp(72px, 15vw, 230px);
+  display: grid;
+  place-items: center;
+  perspective: 1500px;
+  cursor: grab;
+  touch-action: none;
+}
+.scene-type.is-grabbing {
+  cursor: grabbing;
+}
+
+.t-bloom {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(900px, 90vw);
+  height: min(420px, 50vw);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bloom, radial-gradient(closest-side, rgba(255, 120, 200, 0.5), rgba(120, 140, 255, 0.25), transparent));
+  filter: blur(60px);
+  opacity: var(--power, 0.5);
+  pointer-events: none;
+  transition: opacity 400ms var(--ease-out);
+}
+.t-floor {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + var(--t-size) * 0.62 * var(--zoom, 1));
+  width: calc(var(--t-size) * 4.2 * var(--zoom, 1));
+  height: calc(var(--t-size) * 0.32 * var(--zoom, 1));
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.75), transparent);
+  transform: translate(calc(-50% + var(--floor-x, 0px)), -50%) scaleX(var(--floor-s, 1));
+  filter: blur(12px);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.t-rig {
+  position: relative;
+  display: grid;
+  transform-style: preserve-3d;
+  transform: scale(var(--zoom, 1)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  will-change: transform;
+  pointer-events: none;
+}
+.t-squash {
+  display: grid;
+  transform-style: preserve-3d;
+  transform: scale(var(--sq-x, 1), var(--sq-y, 1));
+}
+.t-layer {
+  grid-area: 1 / 1;
+  padding: 0.12em 0.18em;
+  font-family: var(--t-font, "Bagel Fat One"), "Arial Black", Impact, sans-serif;
+  font-size: var(--t-size);
+  line-height: 1;
+  letter-spacing: var(--t-spacing, 0em);
+  white-space: pre;
+  text-align: center;
+  color: transparent;
+  background-image: linear-gradient(rgba(18, 8, 28, var(--shade, 0)), rgba(18, 8, 28, var(--shade, 0))), var(--face);
+  background-size: 100% 100%, var(--tile, 180%) 100%;
+  background-position: 0 0, var(--flow, 30%) 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: hue-rotate(var(--hue, 0deg));
+  transform: translateZ(var(--z, 0px));
+  user-select: none;
+}
+.t-layer.front {
+  -webkit-text-stroke: 0.6px rgba(255, 255, 255, 0.16);
+}
+.t-layer.sheen {
+  background-image: linear-gradient(
+    var(--sheen-angle, 110deg),
+    transparent calc(var(--sheen-pos, 40%) - var(--sheen-w, 12%)),
+    rgba(255, 255, 255, 0.85) var(--sheen-pos, 40%),
+    transparent calc(var(--sheen-pos, 40%) + var(--sheen-w, 12%))
+  );
+  background-size: 100% 100%;
+  background-position: 0 0;
+  opacity: var(--metal, 0.3);
+  filter: blur(var(--rough-blur, 0px));
+  transform: translateZ(0.6px);
+}
+.t-layer.ghost {
+  opacity: 0.25;
+}
+
+/* ---------- Enhance scene (compare) ---------- */
+
+.cmp {
+  position: absolute;
+  inset: 0;
+  --split: 50%;
+  overflow: hidden;
+  background: #07080a;
+  user-select: none;
+  touch-action: none;
+}
+.cmp-pane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0;
+  transition: left var(--t-move) var(--spring), top var(--t-move) var(--spring), width var(--t-move) var(--spring),
+    height var(--t-move) var(--spring), border-radius var(--t-move) var(--ease-out), box-shadow 300ms var(--ease-out),
+    opacity 300ms var(--ease-out);
+}
+.cmp-pane canvas {
+  position: absolute;
+  top: 0;
+  left: var(--cl, 0%);
+  width: var(--cw, 100%);
+  height: 100%;
+  object-fit: cover;
+  transition: left var(--t-move) var(--spring), width var(--t-move) var(--spring), filter 400ms var(--ease-out);
+}
+.cmp-pane.before canvas {
+  image-rendering: pixelated;
+}
+.cmp-pane.after {
+  clip-path: inset(0 0 0 var(--split));
+}
+.cmp.is-morph .cmp-pane {
+  transition: left var(--t-move) var(--spring), top var(--t-move) var(--spring), width var(--t-move) var(--spring),
+    height var(--t-move) var(--spring), border-radius var(--t-move) var(--ease-out), box-shadow 300ms var(--ease-out),
+    clip-path var(--t-move) var(--spring);
+}
+.cmp[data-mode="single"] .cmp-pane.after {
+  transition: clip-path 420ms var(--ease-out);
+}
+.cmp-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--split);
+  width: 44px;
+  margin-left: -22px;
+  cursor: ew-resize;
+  z-index: 3;
+  transition: opacity 300ms var(--ease-out);
+}
+.cmp-divider::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+}
+.cmp-divider .grip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 30px;
+  margin: -15px 0 0 -3px;
+  border-radius: var(--r-pill);
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  transition: transform var(--t-move) var(--spring-bounce), width 200ms var(--ease-out);
+}
+.cmp-divider:hover .grip,
+.cmp.is-dragging .grip {
+  transform: scaleY(1.5);
+}
+.cmp-divider:focus-visible {
+  outline: none;
+}
+.cmp-divider:focus-visible .grip {
+  box-shadow: 0 0 0 3px var(--juice-b);
+}
+.cmp-tag {
+  position: absolute;
+  top: calc(80px + env(safe-area-inset-top, 0px));
+  padding: 5px 9px;
+  border-radius: var(--r-xs);
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: var(--fg-2);
+  white-space: nowrap;
+  transition: opacity 300ms var(--ease-out);
+}
+.cmp-pane.before .cmp-tag {
+  left: calc(20px + env(safe-area-inset-left, 0px));
+}
+.cmp-pane.after .cmp-tag {
+  right: calc(20px + env(safe-area-inset-right, 0px));
+}
+.cmp-scan {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--split);
+  width: 260px;
+  z-index: 2;
+  background: linear-gradient(90deg, #fff 0, rgba(170, 225, 255, 0.6) 1px, rgba(89, 188, 255, 0.16) 30%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms var(--ease-out);
+}
+.cmp.is-scanning .cmp-scan {
+  opacity: 1;
+}
+.cmp.is-scanning .cmp-divider {
+  opacity: 0;
+}
+
+/* modes */
+.cmp[data-mode="single"] .cmp-pane.after {
+  clip-path: inset(0 0 0 0);
+}
+.cmp[data-mode="single"] .cmp-divider,
+.cmp[data-mode="single"] .cmp-pane.before .cmp-tag {
+  opacity: 0;
+  pointer-events: none;
+}
+.cmp[data-mode="single"].is-peek .cmp-pane.after {
+  clip-path: inset(0 0 0 100%);
+}
+
+.cmp[data-mode="side"] .cmp-pane {
+  width: 50%;
+  --cw: 200%;
+  --cl: -50%;
+}
+.cmp[data-mode="side"] .cmp-pane.after {
+  left: 50%;
+  clip-path: inset(0 0 0 0);
+}
+.cmp[data-mode="side"] .cmp-divider {
+  left: 50%;
+  pointer-events: none;
+}
+.cmp[data-mode="side"] .cmp-divider .grip {
+  opacity: 0;
+}
+
+.cmp[data-mode="pip"] .cmp-pane.after {
+  clip-path: inset(0 0 0 0);
+}
+.cmp[data-mode="pip"] .cmp-pane.before {
+  z-index: 4;
+  top: calc(84px + env(safe-area-inset-top, 0px));
+  left: calc(100% - 300px - env(safe-area-inset-right, 0px));
+  width: 280px;
+  height: 172px;
+  border-radius: var(--r-lg);
+  box-shadow: 0 0 0 1px var(--line-strong), 0 24px 50px -16px rgba(0, 0, 0, 0.85);
+}
+.cmp[data-mode="pip"] .cmp-pane.before .cmp-tag {
+  top: 10px;
+  left: 10px;
+}
+.cmp[data-mode="pip"] .cmp-pane.after .cmp-tag {
+  opacity: 0;
+}
+.cmp[data-mode="pip"] .cmp-divider {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- Juice bloom layer ---------- */
+
+.juice {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 900ms var(--ease-out);
+}
+.juice.is-on {
+  opacity: 1;
+  transition: opacity 320ms var(--ease-out);
+}
+.juice i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  filter: blur(46px);
+  will-change: transform;
+}
+.juice .b1 {
+  width: 260px;
+  height: 200px;
+  margin: -100px 0 0 -130px;
+  background: radial-gradient(closest-side, rgba(31, 139, 255, 0.95), rgba(31, 139, 255, 0));
+}
+.juice .b2 {
+  width: 220px;
+  height: 220px;
+  margin: -110px 0 0 -110px;
+  background: radial-gradient(closest-side, rgba(255, 79, 110, 0.75), rgba(255, 79, 110, 0));
+}
+.juice .b3 {
+  width: 180px;
+  height: 160px;
+  margin: -80px 0 0 -90px;
+  background: radial-gradient(closest-side, rgba(110, 210, 255, 0.85), rgba(110, 210, 255, 0));
+}
+
+/* ---------- Chrome (floating islands) ---------- */
+
+.chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.float {
+  position: absolute;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+  transition: opacity 360ms var(--ease-out), transform 700ms var(--spring), visibility 0s;
+}
+/* Dim the islands themselves: opacity on an ancestor would cut their backdrop blur. */
+.float .island,
+.float .thumbs {
+  opacity: calc(var(--dim-floor, 1) + (1 - var(--dim-floor, 1)) * var(--prox, 1));
+  transition: opacity 360ms var(--ease-out);
+}
+.float.tl {
+  top: calc(20px + env(safe-area-inset-top, 0px));
+  left: calc(20px + env(safe-area-inset-left, 0px));
+  align-items: center;
+}
+.float.tr {
+  top: calc(20px + env(safe-area-inset-top, 0px));
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  align-items: center;
+}
+.float.bl {
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  left: calc(20px + env(safe-area-inset-left, 0px));
+  flex-direction: column;
+  align-items: flex-start;
+}
+.float.br {
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  align-items: flex-end;
+}
+.float.bc {
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: column;
+  align-items: stretch;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+.float.rm {
+  top: 50%;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  transform: translateY(-50%);
+}
+.float.tc {
+  top: calc(20px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* idle: chrome steps back, the object stays */
+.app.is-idle .float:not(.is-pinned) .island,
+.app.is-idle .float:not(.is-pinned) .thumbs {
+  opacity: 0.08;
+  transition: opacity 900ms var(--ease-out);
+}
+.app.is-idle .float.tl:not(.is-pinned) {
+  transform: translate(-6px, -6px);
+}
+.app.is-idle .float.tr:not(.is-pinned) {
+  transform: translate(6px, -6px);
+}
+.app.is-idle .float.bl:not(.is-pinned) {
+  transform: translate(-6px, 6px);
+}
+.app.is-idle .float.br:not(.is-pinned) {
+  transform: translate(6px, 6px);
+}
+.app.is-idle .float.bc:not(.is-pinned) {
+  transform: translate(-50%, 10px);
+}
+.app.is-idle .float.rm:not(.is-pinned) {
+  transform: translate(8px, -50%);
+}
+.app.chrome-hidden .float {
+  opacity: 0 !important;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 360ms var(--ease-out), transform 700ms var(--spring), visibility 0s linear 360ms;
+}
+
+/* scene-scoped chrome */
+.app [data-only] {
+  transition: opacity 360ms var(--ease-out), transform 600ms var(--spring), max-width 600ms var(--spring),
+    visibility 0s;
+}
+.app[data-scene="type"] [data-only="enhance"],
+.app[data-scene="enhance"] [data-only="type"],
+.app[data-view="kit"] .chrome .float {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 260ms var(--ease-out), transform 600ms var(--spring), visibility 0s linear 260ms;
+}
+.app[data-scene="type"] .float [data-only="enhance"],
+.app[data-scene="enhance"] .float [data-only="type"] {
+  position: absolute;
+}
+.app[data-scene="type"] .float.bc [data-only="enhance"],
+.app[data-scene="enhance"] .float.bc [data-only="type"] {
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 16px) scale(0.96);
+}
+
+/* Brand */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--h-md);
+  padding: 0 12px 0 8px;
+  border-radius: var(--r-md);
+  font-size: var(--fs-14);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.brand .logo {
+  display: grid;
+  grid-template-columns: repeat(4, 4px);
+  gap: 2px;
+}
+.brand .logo i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--fg);
+  transition: transform 500ms var(--spring-bounce), opacity 300ms var(--ease-out);
+  transition-delay: calc(var(--d) * 28ms);
+}
+.brand:hover .logo i {
+  transform: scale(0.4);
+  opacity: 0.5;
+}
+.brand .caret {
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--fg-3);
+  transition: transform var(--t-move) var(--spring-bounce);
+}
+.brand[aria-expanded="true"] .caret {
+  transform: rotate(180deg);
+}
+
+/* Dock */
+.dock {
+  justify-content: center;
+}
+.dock .cell,
+.dock .fs {
+  height: var(--h-lg);
+}
+.dock .field.hero {
+  width: 230px;
+}
+.dock .fs {
+  min-width: 140px;
+}
+.dock .seg > button {
+  height: 34px;
+}
+.dock-enh .fs.split {
+  min-width: 150px;
+}
+.dock > * {
+  flex-shrink: 0;
+}
+#enhance-btn,
+#kit-busy {
+  min-width: 152px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Font button */
+.aa {
+  font-family: "Bagel Fat One", var(--font-ui);
+  font-size: 22px;
+  font-weight: 400;
+  width: var(--h-lg);
+  padding: 0;
+}
+
+/* Zoom column */
+.zoom {
+  flex-direction: column;
+  padding: 6px;
+  gap: 2px;
+}
+.zoom .icon-btn {
+  width: 44px;
+  height: 40px;
+}
+
+/* Material button */
+.mat-btn {
+  width: 64px;
+  height: 64px;
+  padding: 8px;
+  border-radius: var(--r-lg);
+}
+.mat-btn .sphere {
+  width: 44px;
+}
+.mat-btn:hover .sphere {
+  transform: rotate(-12deg) scale(1.06);
+}
+
+/* Panels anchored bottom-left */
+.panels {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 10px);
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+.panels .panel {
+  pointer-events: auto;
+  transform-origin: bottom left;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(14px) scale(0.92);
+  filter: blur(8px);
+  transition: opacity 220ms var(--ease-out), transform var(--t-pop) var(--spring), filter 260ms var(--ease-out),
+    visibility 0s linear 260ms;
+}
+.panels .panel + .panel {
+  transition-delay: 0s, 40ms, 0s, 0s;
+}
+.panels.is-open .panel {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  filter: none;
+  transition: opacity 220ms var(--ease-out), transform var(--t-pop) var(--spring), filter 260ms var(--ease-out),
+    visibility 0s;
+}
+.panels.is-open .panel + .panel {
+  transition-delay: 60ms;
+}
+.panels .panel.props {
+  width: 280px;
+}
+
+/* Environment + orbit */
+.env-thumb {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+}
+.env-thumb > span {
+  position: absolute;
+  inset: 0;
+  transition: opacity 500ms var(--ease-out), transform 600ms var(--spring);
+}
+.env-thumb > span.studio {
+  background: radial-gradient(70% 45% at 50% 0%, rgba(255, 255, 255, 0.75), transparent 70%),
+    linear-gradient(180deg, #6b6b72 0%, #3a3a40 58%, #232327 59%, #141416 100%);
+}
+.env-thumb > span.dusk {
+  background: radial-gradient(18% 18% at 62% 52%, #ffd9b0 0 60%, transparent 100%),
+    linear-gradient(180deg, #2b2350 0%, #8a5a8c 50%, #e3a08a 58%, #2a1c33 59%, #120c1a 100%);
+}
+.env-thumb > span.void {
+  background: radial-gradient(30% 20% at 50% 40%, #2a2a2e, #000 75%);
+}
+.env-thumb > span:not(.is-on) {
+  opacity: 0;
+  transform: scale(1.3);
+}
+
+/* Stack of image thumbs (Enhance) */
+.thumbs {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 4px;
+}
+.thumbs button {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85), 0 8px 18px -6px rgba(0, 0, 0, 0.7);
+  transform: translate(calc(var(--i) * 4px), calc(var(--i) * -4px)) rotate(calc(var(--i) * 6deg));
+  transition: transform 520ms var(--spring-bounce), box-shadow 200ms var(--ease-out);
+}
+.thumbs button canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.thumbs:hover button,
+.thumbs:focus-within button {
+  transform: translate(calc(var(--i) * 58px), 0) rotate(0deg);
+}
+.thumbs button[aria-checked="true"] {
+  box-shadow: 0 0 0 2px var(--juice-b), 0 8px 18px -6px rgba(0, 0, 0, 0.7);
+}
+
+/* Prompt above the Enhance dock */
+.float.bc .prompt {
+  width: 100%;
+}
+
+/* Coach placement */
+.coach-wrap {
+  position: absolute;
+  z-index: 45;
+  top: calc(76px + env(safe-area-inset-top, 0px));
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  pointer-events: auto;
+  transform-origin: top right;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.94);
+  filter: blur(8px);
+  transition: opacity 240ms var(--ease-out), transform var(--t-pop) var(--spring), filter 260ms var(--ease-out),
+    visibility 0s linear 260ms;
+}
+.coach-wrap.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  filter: none;
+  transition: opacity 240ms var(--ease-out), transform var(--t-pop) var(--spring), filter 260ms var(--ease-out),
+    visibility 0s;
+}
+
+/* View switcher (Stage / Kit) */
+.switcher {
+  position: fixed;
+  z-index: 30;
+  top: calc(20px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px;
+  border-radius: calc(var(--r-sm) + 5px);
+}
+.switcher .seg {
+  background: transparent;
+  box-shadow: none;
+}
+.switcher .seg > button {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  padding: 0 12px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 900px) {
+  .float.rm {
+    display: none;
+  }
+  .dock .field.hero {
+    width: 160px;
+  }
+  .dock .fs {
+    min-width: 110px;
+  }
+}
+
+@media (max-width: 720px) {
+  .float.tl,
+  .float.tr,
+  .float.bl,
+  .float.br,
+  .float.bc {
+    --pad: 12px;
+  }
+  .float.tl {
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    left: calc(12px + env(safe-area-inset-left, 0px));
+  }
+  .float.tr {
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: calc(12px + env(safe-area-inset-right, 0px));
+  }
+  .switcher {
+    top: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+  .float.bc {
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 24px);
+  }
+  .dock {
+    flex-wrap: wrap;
+  }
+  .dock .field.hero {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  .dock .fs,
+  .dock .fs.split {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .dock-enh .seg {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+  .dock-enh .seg > button {
+    flex: 1;
+  }
+  .dock-enh .juice-btn {
+    flex: 1 1 auto;
+  }
+  .float.bl {
+    bottom: auto;
+    top: calc(64px + env(safe-area-inset-top, 0px));
+  }
+  .float.bl .panels .panel {
+    transform-origin: top left;
+  }
+  .float.br {
+    bottom: auto;
+    top: calc(64px + env(safe-area-inset-top, 0px));
+    right: calc(12px + env(safe-area-inset-right, 0px));
+  }
+  .float.br .island {
+    flex-direction: column;
+  }
+  .float.tl {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .app[data-scene="enhance"] .float.bl {
+    top: calc(118px + env(safe-area-inset-top, 0px));
+  }
+  .float.bl .panels {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: calc(192px + env(safe-area-inset-top, 0px));
+    bottom: calc(214px + env(safe-area-inset-bottom, 0px));
+    flex-direction: row;
+    align-items: stretch;
+    gap: 10px;
+    padding: 0 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .float.bl .panels.is-open {
+    pointer-events: auto;
+  }
+  .float.bl .panels .panel,
+  .float.bl .panels .panel.props {
+    flex: 0 0 calc(100vw - 48px);
+    width: auto;
+    max-width: none;
+    max-height: none;
+    scroll-snap-align: center;
+  }
+  .dock-enh .fs.split {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .dock-enh #enhance-btn {
+    flex: none;
+    min-width: 0;
+  }
+  .float.tl .brand-name,
+  .tr .avatar-btn .chev {
+    display: none;
+  }
+  .coach-wrap {
+    right: 12px;
+    left: 12px;
+    top: calc(64px + env(safe-area-inset-top, 0px));
+  }
+  .coach-wrap .coach {
+    width: 100%;
+  }
+  .cmp[data-mode="pip"] .cmp-pane.before {
+    left: calc(100% - 172px);
+    width: 160px;
+    height: 100px;
+    top: calc(130px + env(safe-area-inset-top, 0px));
+  }
+  .cmp-tag {
+    top: auto;
+    bottom: calc(372px + env(safe-area-inset-bottom, 0px));
+  }
+}
