@@ -1,0 +1,34 @@
+{
+  "name": "kiln",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Shape to production 3D render, built on Maga UI",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "e2e:spike": "node tests/e2e/spike.mjs",
+    "e2e:mesher": "node tests/e2e/mesher.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/three": "^0.185.0",
+    "@webgpu/types": "^0.1.74",
+    "playwright": "^1.56.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "@phosphor-icons/core": "^2.1.1",
+    "dompurify": "^3.4.17",
+    "fast-png": "^8.0.0",
+    "meshoptimizer": "^1.1.1",
+    "three": "^0.185.1",
+    "three-gpu-pathtracer": "^0.0.27",
+    "three-mesh-bvh": "^0.9.16"
+  }
+}

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kiln spike</title>
+<style>
+  :root { color-scheme: dark; --bg: #0e0e10; --fg: #f3f3f4; --fg2: rgba(243,243,244,.6); --line: rgba(255,255,255,.1); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 13px/1.4 system-ui, sans-serif; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; padding: 16px; min-height: 100vh; }
+  .stage { display: grid; gap: 12px; align-content: start; }
+  canvas#preview { width: 100%; aspect-ratio: 1; max-height: 70vh; border-radius: 16px; background: repeating-conic-gradient(#1b1b1f 0 25%, #222227 0 50%) 0 0 / 24px 24px; }
+  .result { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  #result { width: 100%; max-width: 640px; aspect-ratio: 1; border-radius: 16px; background: repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0 / 24px 24px; object-fit: contain; }
+  aside { display: grid; gap: 10px; align-content: start; }
+  label { display: grid; gap: 4px; color: var(--fg2); }
+  select, input, button { font: inherit; color: inherit; background: #1d1d21; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+  button { cursor: pointer; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  #log { white-space: pre-wrap; font: 11px/1.45 ui-monospace, monospace; background: #151518; border-radius: 12px; padding: 10px; max-height: 40vh; overflow: auto; }
+  #qa { display: flex; flex-wrap: wrap; gap: 8px; }
+  .qa-cell { display: grid; place-items: center; gap: 4px; padding: 10px; border-radius: 12px; color: #888; font-size: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <section class="stage">
+    <canvas id="preview" aria-label="Raster preview"></canvas>
+    <div class="result">
+      <img id="result" alt="Path-traced result">
+      <div id="qa" aria-label="QA strip"></div>
+    </div>
+  </section>
+  <aside>
+    <strong>Kiln · Phase 0 spike</strong>
+    <label>Azimuth <input id="az" type="range" min="-60" max="60" value="25"></label>
+    <label>Elevation <input id="el" type="range" min="-10" max="60" value="12"></label>
+    <label>Size <select id="size"><option>256</option><option selected>512</option><option>1024</option><option>2048</option></select></label>
+    <label>Samples <select id="spp"><option>16</option><option selected>64</option><option>256</option><option>384</option></select></label>
+    <div class="row">
+      <button id="render">Render</button>
+      <button id="png8">PNG 8</button>
+      <button id="png16">PNG 16</button>
+      <button id="mesher">Mesher suite</button>
+    </div>
+    <div id="progress" class="mono"></div>
+    <div id="log" role="log"></div>
+  </aside>
+</main>
+<script type="module" src="/src/spike/main.ts"></script>
+</body>
+</html>

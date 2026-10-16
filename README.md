@@ -4,7 +4,20 @@
 
 Сейчас это HTML-прототип: потыкать, почувствовать интеракции, решить, что и как переносить в продакшн.
 
-## Запуск
+## Kiln (`apps/kiln/`)
+
+Первый проект на ките: форма или SVG → 3D → материал, свет, ракурс → production PNG с прозрачным фоном (path tracing в браузере, WebGPU). Сейчас пройдена Phase 0 (spike): находки и цифры в [`apps/kiln/SPIKE.md`](apps/kiln/SPIKE.md).
+
+```sh
+cd apps/kiln
+npm install
+npm run dev        # → /spike.html
+npm test           # vitest: distance field, mesher
+node tests/e2e/spike.mjs   # Playwright + SwiftShader WebGPU: path-traced export
+node tests/e2e/mesher.mjs  # шесть сложных SVG через воркер
+```
+
+## Запуск (прототип кита)
 
 Открыть `prototype/index.html` в браузере. Сборка и сервер не нужны (vanilla JS, без модулей, работает с `file://`).
 
