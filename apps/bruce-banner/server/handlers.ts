@@ -22,7 +22,8 @@ export async function handleBrief(req: Request, env: ServerEnv) {
     guard(req, env, 'text');
     const body = parseBrief(await readJson(req));
     if (env.mock) return json(mockBrief(body) satisfies BriefResponse);
-    const raw = await generateJson<unknown>({ env, system: briefSystem(body.catalog), prompt: briefPrompt(body.brief, body.avoid), schema: briefSchema(body.catalog), signal: req.signal });
+    // three variants in three languages within the catalog's limits: a little thinking pays off
+    const raw = await generateJson<unknown>({ env, system: briefSystem(body.catalog), prompt: briefPrompt(body.brief, body.avoid), schema: briefSchema(body.catalog), thinking: 'low', timeoutMs: 50_000, signal: req.signal });
     const variants = cleanVariants(raw, body.catalog);
     if (!variants.length) throw new HttpError(502, 'upstream', 'Модель не предложила ни одного варианта');
     return json({ variants, mock: false, model: env.textModel } satisfies BriefResponse);
@@ -41,6 +42,9 @@ export async function handleText(req: Request, env: ServerEnv) {
       system: textSystem(),
       prompt: textPrompt(body.op, body.slot, body.texts, body.from, body.to, body.limits, body.context),
       schema: textSchema(body.to),
+      // 'low' is the floor for gemini-3.8-flash: 'minimal' is refused with a 400
+      thinking: 'low',
+      timeoutMs: 35_000,
       signal: req.signal,
     });
     return json({ ...cleanTexts(raw, body.to), mock: false, model: env.textModel } satisfies TextResponse);
@@ -75,7 +79,7 @@ export async function handleIllustration(req: Request, env: ServerEnv) {
     const refs = env.styleRefs ? await styleRefs() : [];
     const prompt = imagePrompt(body.subject, body.theme, refs.length > 0);
     const img = await generateImage({ env, prompt, refs, signal: req.signal });
-    if (!/png|webp/.test(img.mime)) throw new HttpError(502, 'upstream', 'Модель вернула JPEG: края не вырезать чисто, попробуйте ещё раз');
+    if (!/png|jpe?g|webp/.test(img.mime)) throw new HttpError(502, 'upstream', `Модель вернула ${img.mime}, а нужна картинка`);
     return json({ image: img.data, mime: img.mime, prompt, mock: false, model: env.imageModel } satisfies IllustrationResponse);
   } catch (e) {
     return toResponse(e);

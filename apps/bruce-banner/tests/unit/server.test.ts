@@ -168,6 +168,22 @@ describe('model answers are kept inside the catalog', () => {
 });
 
 describe('Gemini response shapes', () => {
+  // trimmed from live answers on 2026-10-17: a thought step, then the model output
+  it('reads a live interaction: thought step first, then model_output', () => {
+    const live = {
+      status: 'completed',
+      object: 'interaction',
+      model: 'gemini-3.8-flash',
+      steps: [
+        { type: 'thought', signature: 'EuVECuJE…' },
+        { type: 'model_output', content: [{ type: 'text', text: '{\n  "ru": "Кредит до 100 млн сум"\n}' }] },
+      ],
+    };
+    expect(JSON.parse(extractText(live)!)).toEqual({ ru: 'Кредит до 100 млн сум' });
+    const image = { status: 'completed', steps: [{ type: 'thought', signature: 'x' }, { type: 'model_output', content: [{ type: 'image', mime_type: 'image/jpeg', data: '/9j/4AAQ' }] }] };
+    expect(extractImage(image)).toEqual({ data: '/9j/4AAQ', mime: 'image/jpeg' });
+  });
+
   it('reads text from output_text, steps or candidates', () => {
     expect(extractText({ output_text: '{"a":1}' })).toBe('{"a":1}');
     expect(extractText({ steps: [{ type: 'model_output', content: [{ type: 'text', text: '{"b"' }, { type: 'text', text: ':2}' }] }] })).toBe('{"b":2}');

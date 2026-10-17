@@ -1,10 +1,12 @@
 /**
- * Gemini over the Interactions API (POST /v1beta/interactions), checked against the docs on
- * 2026-10-16: body { model, input, system_instruction, store, response_format }, structured text in
- * `output_text`, images as `{ type: 'image', data }` blocks in `steps[].content[]`. Every call sends
- * store:false: briefs carry unreleased rates. The parsers also accept the older shapes, so a
- * response format change shows up as a clear error instead of an empty banner.
- * Not yet verified against a live key: the first smoke test pins this (see README).
+ * Gemini over the Interactions API (POST /v1beta/interactions), verified with a live key on
+ * 2026-10-17: body { model, input, system_instruction, store, response_format, generation_config };
+ * the answer is `steps[]`: a `thought` step, then `model_output` with `{ type: 'text', text }` or
+ * `{ type: 'image', mime_type: 'image/jpeg', data }` blocks. Image output is JPEG only (the API's
+ * ImageResponseFormat allows nothing else); the browser keys the magenta out of it.
+ * Text models think by default (~3k thought tokens for a three-word answer, 24 s): thinking_level
+ * keeps that in check. Every call sends store:false: briefs carry unreleased rates. The parsers also
+ * accept the older shapes, so a format change shows up as a clear error instead of an empty banner.
  */
 import type { ServerEnv } from './env.js';
 import { HttpError } from './http.js';
@@ -13,12 +15,15 @@ const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/interactions'
 
 type Block = { type: 'text'; text: string } | { type: 'image'; mime_type: string; data: string };
 
+export type ThinkingLevel = 'minimal' | 'low' | 'medium' | 'high';
+
 interface CallOpts {
   env: ServerEnv;
   model: string;
   system: string;
   input: string | Block[];
   responseFormat: Record<string, unknown>;
+  generationConfig?: Record<string, unknown>;
   timeoutMs: number;
   signal?: AbortSignal;
 }
@@ -32,7 +37,14 @@ async function call(opts: CallOpts): Promise<unknown> {
     res = await fetch(ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': opts.env.apiKey },
-      body: JSON.stringify({ model: opts.model, input: opts.input, system_instruction: opts.system, store: false, response_format: opts.responseFormat }),
+      body: JSON.stringify({
+        model: opts.model,
+        input: opts.input,
+        system_instruction: opts.system,
+        store: false,
+        response_format: opts.responseFormat,
+        ...(opts.generationConfig ? { generation_config: opts.generationConfig } : {}),
+      }),
       signal,
     });
   } catch (e) {
@@ -112,7 +124,8 @@ export function extractImage(r: unknown): { data: string; mime: string } | null 
 }
 
 /** Structured JSON from the text model. One retry on 429/5xx (never after a timeout). */
-export async function generateJson<T>(opts: { env: ServerEnv; system: string; prompt: string; schema: Record<string, unknown>; signal?: AbortSignal }): Promise<T> {
+export async function generateJson<T>(opts: { env: ServerEnv; system: string; prompt: string; schema: Record<string, unknown>; thinking?: ThinkingLevel; timeoutMs?: number; signal?: AbortSignal }): Promise<T> {
+  let thinking: ThinkingLevel | null = opts.thinking ?? 'low';
   const run = () =>
     call({
       env: opts.env,
@@ -120,7 +133,8 @@ export async function generateJson<T>(opts: { env: ServerEnv; system: string; pr
       system: opts.system,
       input: opts.prompt,
       responseFormat: { type: 'text', mime_type: 'application/json', schema: opts.schema },
-      timeoutMs: 30_000,
+      generationConfig: thinking ? { thinking_level: thinking } : undefined,
+      timeoutMs: opts.timeoutMs ?? 30_000,
       signal: opts.signal,
     });
   let r: unknown;
@@ -128,9 +142,12 @@ export async function generateJson<T>(opts: { env: ServerEnv; system: string; pr
     r = await run();
   } catch (e) {
     const err = e as HttpError;
+    // a model set through env may not know thinking_level (or this level): ask again without it
+    const thinkingRefused = err instanceof HttpError && err.code === 'upstream' && /thinking/i.test(err.message);
     const retryable = err instanceof HttpError && (err.code === 'rate_limited' || (err.code === 'upstream' && err.status >= 500));
-    if (!retryable || (err.retryAfter ?? 0) > 8) throw e;
-    await new Promise((res) => setTimeout(res, (err.retryAfter ?? 1.5) * 1000));
+    if (thinkingRefused) thinking = null;
+    else if (!retryable || (err.retryAfter ?? 0) > 8) throw e;
+    else await new Promise((res) => setTimeout(res, (err.retryAfter ?? 1.5) * 1000));
     r = await run();
   }
   const text = extractText(r);
@@ -150,7 +167,8 @@ export async function generateImage(opts: { env: ServerEnv; prompt: string; refs
     model: opts.env.imageModel,
     system: 'You render single isolated 3D illustrations for banking app banners.',
     input,
-    responseFormat: { type: 'image', mime_type: 'image/png', aspect_ratio: '1:1', image_size: '1K' },
+    // JPEG is the only image format the API returns
+    responseFormat: { type: 'image', aspect_ratio: '1:1', image_size: '1K' },
     timeoutMs: 90_000,
     signal: opts.signal,
   });

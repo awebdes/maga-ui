@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alphaOf, borderFlatness, crop, excess, keyMagenta } from '../../src/app/chroma';
+import { alphaOf, borderFlatness, crop, estimateKey, excess, keyMagenta } from '../../src/app/chroma';
 
 type RGB = [number, number, number];
 const MAGENTA: RGB = [255, 0, 255];
@@ -28,14 +28,12 @@ describe('magenta excess', () => {
     expect(excess(255, 255, 255)).toBe(0);
   });
 
-  it('maps to alpha: opaque objects, transparent key, smooth between', () => {
+  it('maps the share of the key excess to alpha: opaque objects, clear key, smooth between', () => {
     expect(alphaOf(-0.5)).toBe(1);
-    expect(alphaOf(0.12)).toBe(1);
-    expect(alphaOf(0.8)).toBe(0);
-    expect(alphaOf(1)).toBe(0);
-    const mid = alphaOf(0.46);
-    expect(mid).toBeGreaterThan(0.3);
-    expect(mid).toBeLessThan(0.7);
+    expect(alphaOf(0.15)).toBe(1);
+    expect(alphaOf(0.85)).toBe(0);
+    expect(alphaOf(1.02)).toBe(0);
+    expect(alphaOf(0.5)).toBeCloseTo(0.5, 5);
     expect(alphaOf(0.3)).toBeGreaterThan(alphaOf(0.6));
   });
 });
@@ -63,13 +61,18 @@ describe('keyMagenta', () => {
     expect(at(r.data, W, 20, 19).slice(0, 3)).toEqual(ORANGE);
   });
 
-  it('un-mixes the key out of edge pixels', () => {
-    const [red, g, b, a] = at(r.data, W, 11, 20);
+  it('gives edge pixels the colour of the object next to them', () => {
+    const [red, g, b, a] = at(r.data, W, 11, 14);
     expect(a).toBeGreaterThan(40);
     expect(a).toBeLessThan(230);
-    // the recovered colour is green, not pink
-    expect(g).toBeGreaterThan(red);
-    expect(g).toBeGreaterThan(b);
+    expect([red, g, b]).toEqual(GREEN);
+  });
+
+  it('leaves no pink fringe anywhere', () => {
+    for (let i = 0; i < W * H; i++) {
+      const [red, g, b, a] = r.data.subarray(i * 4, i * 4 + 4);
+      if (a > 0 && a < 255) expect(Math.min(red, b) - g).toBeLessThanOrEqual(0);
+    }
   });
 
   it('crops to the object with a margin', () => {
@@ -81,6 +84,35 @@ describe('keyMagenta', () => {
 
   it('finds nothing on a blank key', () => {
     expect(keyMagenta(image(8, 8, () => MAGENTA), 8, 8).bbox).toBeNull();
+  });
+});
+
+describe('the key as the model paints it: lighter than #FF00FF, in JPEG', () => {
+  // the live model answers about (252, 57, 251) with JPEG noise; a round green object in the middle
+  const W = 64;
+  const H = 64;
+  let seed = 7;
+  const noise = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648 - 0.5) * 9;
+  const px = image(W, H, (x, y) => (Math.hypot(x - 32, y - 32) < 14 ? GREEN : [252 + noise(), 57 + noise(), 251 + noise()].map((v) => Math.max(0, Math.min(255, Math.round(v)))) as RGB));
+  const r = keyMagenta(px, W, H, 2);
+
+  it('measures the key on the border', () => {
+    const k = estimateKey(px, W, H);
+    expect(Math.abs(k[0] - 252)).toBeLessThan(4);
+    expect(Math.abs(k[1] - 57)).toBeLessThan(4);
+    expect(Math.abs(k[2] - 251)).toBeLessThan(4);
+  });
+
+  it('calls the noisy border flat, keys it out with no haze and keeps the object', () => {
+    expect(r.borderFlat).toBeGreaterThan(0.95);
+    let haze = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (Math.hypot(x - 32, y - 32) > 17 && at(r.data, W, x, y)[3] > 0) haze++;
+    expect(haze).toBe(0);
+    expect(at(r.data, W, 32, 32)).toEqual([...GREEN, 255]);
+  });
+
+  it('refuses a background that is not magenta at all', () => {
+    expect(borderFlatness(image(16, 16, () => [190, 190, 196]), 16, 16)).toBe(0);
   });
 });
 

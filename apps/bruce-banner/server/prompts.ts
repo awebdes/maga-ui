@@ -34,8 +34,10 @@ export function briefPrompt(brief: string, avoid: string[] = []) {
 }
 
 const OP_TASK: Record<TextOp, string> = {
-  shorter: 'Make the text shorter so it fits comfortably; keep every fact and number.',
-  rephrase: 'Write a different wording with the same facts and numbers; keep about the same length.',
+  shorter:
+    'Make the text shorter so it fits comfortably: drop or swap words, keep every fact and number. Never add anything the text does not say: no new channel, speed, condition or promise (not "online", "free", "instantly", "for everyone") — a shorter text says less, never something else.',
+  rephrase:
+    'Write a different wording with the same facts and numbers; keep about the same length. Add no new claims: no channel, speed, condition or promise the text and the brief do not state.',
   translate: 'Translate from the source language into the target languages, natively and idiomatically, keeping every number and name.',
   fix: 'Fix grammar, spelling and typography only. Uzbek: Latin script with ‘ in o‘ and g‘.',
 };
