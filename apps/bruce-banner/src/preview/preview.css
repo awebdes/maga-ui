@@ -1,6 +1,6 @@
-/* Preview: an Android phone with the Ipoteka home screen around the banner slot.
-   App tokens (from the «Выгода» prototype): green #52AE30, dark green #2F7D1A, ink #2A2B2E,
-   secondary #5D6168, background #F6F7FA, Source Sans 3. */
+/* Preview: an iPhone with the Ipoteka home screen (Figma «1.0. Home Page») around the banner slot.
+   Tokens from the file: green #52AE30, ink #2A2B2E, secondary #7D828B, page #F6F7FA, input #F1F3F8,
+   Source Sans 3. */
 
 .preview {
   --app-green: #52ae30;
@@ -12,7 +12,7 @@
   --app-bg: #f6f7fa;
   --app-card: #ffffff;
   --app-line: #e8eaef;
-  --slot-r: 12px;
+  --slot-r: 18px;
   position: absolute;
   inset: 0;
   z-index: 30;
@@ -130,40 +130,49 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 380px;
-  height: 820px;
-  padding: 10px;
-  border-radius: 50px;
+  width: 399px;
+  height: 836px;
+  padding: 12px;
+  border-radius: 64px;
   background: linear-gradient(145deg, #2b2c30, #121315 40%, #1b1c1f);
   box-shadow:
     0 0 0 1.5px #3a3b40 inset,
-    0 0 0 4px #0b0b0c inset,
+    0 0 0 5px #0b0b0c inset,
     0 60px 120px -40px rgba(0, 0, 0, 0.9),
     0 30px 60px -30px rgba(82, 174, 48, 0.18);
   transform-origin: top left;
 }
 .pv-btn {
   position: absolute;
-  right: -2.5px;
   width: 3.5px;
-  border-radius: 0 3px 3px 0;
   background: linear-gradient(90deg, #26272b, #3b3c41);
 }
 .pv-power {
-  top: 190px;
-  height: 64px;
+  right: -2.5px;
+  top: 220px;
+  height: 96px;
+  border-radius: 0 3px 3px 0;
+}
+.pv-vol,
+.pv-vol2 {
+  left: -2.5px;
+  height: 62px;
+  border-radius: 3px 0 0 3px;
 }
 .pv-vol {
-  top: 290px;
-  height: 110px;
+  top: 200px;
+}
+.pv-vol2 {
+  top: 276px;
 }
 
+/* the screen: Figma «1.0. Home Page» → First Enter / Main, 375×812 */
 .pv-screen {
   position: relative;
-  width: 360px;
-  height: 800px;
+  width: 375px;
+  height: 812px;
   overflow: hidden;
-  border-radius: 40px;
+  border-radius: 52px;
   background: var(--app-bg);
   color: var(--app-ink);
   font-family: "Source Sans 3", "Source Sans Pro", -apple-system, sans-serif;
@@ -171,6 +180,10 @@
   line-height: 1.3;
   -webkit-font-smoothing: antialiased;
   user-select: none;
+}
+.pv-screen img {
+  display: block;
+  pointer-events: none;
 }
 .pv-screen .pv-t,
 .pv-screen .pv-banner {
@@ -181,237 +194,276 @@
   opacity: 0;
   transition-duration: 140ms;
 }
-
-.pv-screen svg {
-  width: 22px;
-  height: 22px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.7;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.pv-island {
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  width: 124px;
+  height: 36px;
+  margin-left: -62px;
+  border-radius: 18px;
+  background: #000;
 }
 
-/* status bar with the punch-hole camera */
+.pv-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* header: picture, status bar, round buttons, balance, «Новая карта» */
+.pv-hero {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 375px;
+  height: 450px;
+  overflow: hidden;
+  background: #1f2a14;
+}
+.pv-hero-bg {
+  position: absolute;
+  left: -282.75px;
+  top: -14px;
+  width: 848px;
+  height: 478px;
+  max-width: none;
+  object-fit: cover;
+}
+.pv-hero-shape {
+  position: absolute;
+  left: -298px;
+  top: -464px;
+  width: 971px;
+  height: 720px;
+  max-width: none;
+}
+.pv-head {
+  position: relative;
+  color: #fff;
+}
 .pv-status {
   position: relative;
-  height: 34px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 22px 0 26px;
-  font-size: 13.5px;
+  padding: 0 24px 0 31px;
+  font-family: -apple-system, "SF Pro Text", "Inter", sans-serif;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.3px;
 }
-.pv-punch {
-  position: absolute;
-  left: 50%;
-  top: 10px;
-  width: 13px;
-  height: 13px;
-  margin-left: -6.5px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #2a2d36, #050506 60%);
-  box-shadow: 0 0 0 1.5px #0a0a0b;
+.pv-time {
+  width: 54px;
+  text-align: center;
 }
 .pv-sys {
   display: flex;
   align-items: center;
   gap: 5px;
 }
-.pv-sys svg {
-  width: auto;
+.pv-sb-cell {
+  width: 17px;
+  height: 10.7px;
+}
+.pv-sb-wifi {
+  width: 15.3px;
   height: 11px;
-  stroke: none;
 }
-
-.pv-scroll {
-  position: absolute;
-  inset: 34px 0 0;
-  overflow: hidden;
-  padding-bottom: 96px;
-}
-
-/* greeting */
-.pv-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px 6px;
-}
-.pv-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--app-green-soft);
-  color: var(--app-green-dark);
-  font-weight: 700;
-  font-size: 17px;
-}
-.pv-hello {
-  display: grid;
-  flex: 1;
-  min-width: 0;
-}
-.pv-greet {
-  color: var(--app-ink-2);
-  font-size: 13px;
-}
-.pv-name {
-  font-size: 17px;
-  font-weight: 700;
-}
-.pv-bell {
+.pv-battery {
   position: relative;
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--app-card);
-  color: var(--app-ink);
+  width: 22px;
+  height: 11.3px;
+  margin-right: 1.5px;
 }
-.pv-bell::after {
+.pv-battery::before {
   content: "";
   position: absolute;
-  top: 10px;
-  right: 11px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #f4821f;
-  box-shadow: 0 0 0 2px var(--app-card);
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 2.7px;
 }
-
-/* balance */
-.pv-balance {
-  margin: 8px 16px 0;
-  padding: 14px 16px 12px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #2f7d1a, #52ae30 70%, #6cc04a);
-  color: #fff;
-  box-shadow: 0 12px 24px -16px rgba(47, 125, 26, 0.8);
+.pv-battery::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 18px;
+  height: 7.3px;
+  border-radius: 1.3px;
+  background: #fff;
 }
-.pv-bal-top {
+.pv-sb-cap {
+  width: 1.3px;
+  height: 4px;
+  margin-left: -5px;
+}
+.pv-circles {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
-  opacity: 0.86;
+  margin-top: 6px;
+  padding: 0 16px;
 }
-.pv-eye svg {
-  width: 18px;
-  height: 18px;
+.pv-circle {
+  width: 40px;
+  height: 40px;
+}
+.pv-circle-pair {
+  width: 92px;
+  height: 40px;
+}
+.pv-balance {
+  display: grid;
+  gap: 4px;
+  margin-top: 28px;
+  padding: 0 16px;
+}
+.pv-bal-label {
+  font-size: 16px;
+  line-height: 22px;
+  color: rgba(255, 255, 255, 0.7);
 }
 .pv-bal-amount {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  margin-top: 2px;
 }
 .pv-amount {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: 32px;
+  line-height: 36px;
+  font-weight: 600;
+  letter-spacing: -1px;
 }
 .pv-cur {
-  font-size: 15px;
-  font-weight: 600;
-  opacity: 0.86;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 500;
+  letter-spacing: -0.4px;
+  color: rgba(255, 255, 255, 0.7);
 }
-.pv-bal-link {
+.pv-tile {
   display: flex;
   align-items: center;
-  gap: 2px;
-  margin-top: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  gap: 20px;
+  height: 76px;
+  margin: 28px 8px 0;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(45px);
+  backdrop-filter: blur(45px);
 }
-.pv-chev svg {
-  width: 15px;
-  height: 15px;
-  display: block;
-}
-
-/* cards */
-.pv-cards {
-  display: flex;
-  gap: 10px;
-  padding: 12px 16px 2px;
-  overflow: hidden;
-}
-.pv-card {
+.pv-tile-card {
   flex: none;
-  width: 104px;
+  width: 54px;
+  height: 36px;
   display: grid;
-  gap: 5px;
+  place-items: center;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 10px rgba(16, 24, 40, 0.2);
 }
-.pv-card img {
-  display: block;
-  width: 104px;
-  height: 66px;
-  object-fit: contain;
-  filter: drop-shadow(0 6px 8px rgba(23, 40, 18, 0.18));
+.pv-plus {
+  width: 20px;
+  height: 20px;
 }
-.pv-card-label {
-  font-size: 12px;
-  color: var(--app-ink-2);
+.pv-tile-text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  font-weight: 500;
   white-space: nowrap;
 }
+.pv-tile-title {
+  font-size: 18px;
+  line-height: 24px;
+  letter-spacing: -0.2px;
+}
+.pv-tile-sub {
+  font-size: 14px;
+  line-height: 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
 
-/* quick actions */
-.pv-actions {
+/* widgets: white cards on the page, 8 px apart, the first one over the picture */
+.pv-widgets {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 308px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  padding: 14px 10px 4px;
+  gap: 8px;
+  min-height: 504px;
+  align-content: start;
+  border-radius: 20px 20px 0 0;
+  background: var(--app-bg);
 }
-.pv-action {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
+.pv-widget {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
+}
+.pv-search {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+}
+.pv-input {
+  flex: 1;
   min-width: 0;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  padding-left: 16px;
+  border-radius: 16px;
+  background: #f1f3f8;
+  font-size: 16px;
+  line-height: 22px;
+  color: #7d828b;
+  white-space: nowrap;
 }
-.pv-action-ic {
-  width: 52px;
-  height: 52px;
+.pv-qr {
+  flex: none;
+  width: 62px;
+  height: 62px;
   display: grid;
   place-items: center;
   border-radius: 16px;
-  background: var(--app-card);
-  color: var(--app-green-dark);
-  box-shadow: 0 1px 0 var(--app-line);
+  background: #f1f3f8;
 }
-.pv-action-label {
-  max-width: 100%;
-  font-size: 12px;
+.pv-qr-ic {
+  width: 24px;
+  height: 24px;
+}
+.pv-h {
+  display: block;
+  padding: 0 16px;
+  font-size: 18px;
+  line-height: 24px;
   font-weight: 600;
+  letter-spacing: -0.2px;
   color: var(--app-ink);
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+.pv-group {
+  padding: 16px 0 16px;
 }
 
-/* the banner slot: 328×106 at x = 16, masked, neighbours peek on the right */
+/* the banner carousel: 328×106 slides, 10 px apart, from x = 16; the next one peeks */
 .pv-promo {
-  margin-top: 14px;
+  padding: 16px;
   touch-action: pan-y;
   cursor: grab;
 }
 .pv-promo:active {
   cursor: grabbing;
 }
-.pv-viewport {
-  overflow: hidden;
-  padding: 0 16px;
-}
 .pv-track {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   transition: transform 520ms var(--spring);
   will-change: transform;
 }
@@ -419,154 +471,245 @@
   transition: none;
 }
 .pv-slide {
+  position: relative;
   flex: none;
   width: 328px;
   height: 106px;
   border-radius: var(--slot-r);
   overflow: hidden;
-  background: #e9ecf1;
+  background: #ebeef2;
+  color: #fff;
 }
 .pv-banner {
   display: block;
   pointer-events: none;
 }
-.pv-dots {
-  display: flex;
-  justify-content: center;
-  gap: 5px;
-  padding-top: 8px;
+.pv-autoloan {
+  background: linear-gradient(90deg, #36383c, #c7cad0);
 }
-.pv-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 3px;
-  background: #cfd3da;
-  transition: width 360ms var(--spring), background-color 240ms var(--ease-out);
-}
-.pv-dot.is-on {
-  width: 16px;
-  background: var(--app-green);
-}
-
-/* recent operations */
-.pv-ops {
-  margin: 14px 16px 0;
-  padding: 12px 14px 4px;
-  border-radius: 18px;
-  background: var(--app-card);
-}
-.pv-ops-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding-bottom: 6px;
-}
-.pv-h {
+.pv-al-title {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  font-family: Squad, "Source Sans 3", sans-serif;
   font-size: 16px;
+  line-height: 18px;
+  font-weight: 700;
+  letter-spacing: -0.08px;
+}
+.pv-al-more {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  padding: 6px 8px 5px;
+  border-radius: 36px;
+  background: #fff;
+  color: #000;
+  font-family: Squad, "Source Sans 3", sans-serif;
+  font-size: 13px;
+  line-height: 13px;
   font-weight: 700;
 }
-.pv-link {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--app-green-dark);
-}
-.pv-op {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 0;
-  border-top: 1px solid var(--app-line);
-}
-.pv-op:nth-child(2) {
-  border-top: 0;
-}
-.pv-op-ic {
-  width: 38px;
-  height: 38px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #f0f2f5;
-  color: var(--app-ink-2);
-}
-.pv-op-ic svg {
-  width: 19px;
-  height: 19px;
-}
-.pv-op.is-in .pv-op-ic {
-  background: var(--app-green-soft);
-  color: var(--app-green-dark);
-}
-.pv-op-text {
-  display: grid;
-  flex: 1;
-  min-width: 0;
-}
-.pv-op-title {
-  font-size: 14.5px;
-  font-weight: 600;
-}
-.pv-op-meta {
-  font-size: 12px;
-  color: var(--app-ink-3);
-  white-space: nowrap;
+.pv-al-car {
+  position: absolute;
+  left: 178px;
+  top: -64px;
+  width: 170px;
+  height: 170px;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
-.pv-op-amount {
-  font-size: 14.5px;
+.pv-al-car img {
+  position: absolute;
+  left: 0;
+  top: -19.22%;
+  width: 169.43%;
+  height: 176.49%;
+  max-width: none;
+}
+.pv-daromax {
+  background: #000;
+}
+.pv-dm-glow {
+  position: absolute;
+  right: -167px;
+  bottom: -321px;
+  width: 484px;
+  height: 484px;
+  max-width: none;
+}
+.pv-dm-title {
+  position: absolute;
+  left: 16px;
+  top: 20px;
+  width: 166px;
+  font-size: 16px;
+  line-height: 22px;
   font-weight: 600;
+}
+.pv-dm-pic {
+  position: absolute;
+  left: 155px;
+  top: -22px;
+  width: 194px;
+  height: 194px;
+}
+.pv-chip {
+  position: absolute;
+  padding: 6px 12px;
+  border-radius: 32px;
+  background: #fff;
+  color: #000;
+  font-size: 14px;
+  line-height: 16px;
+  letter-spacing: -0.14px;
   white-space: nowrap;
 }
-.pv-op.is-in .pv-op-amount {
-  color: var(--app-green-dark);
+.pv-dm-chip {
+  right: 76px;
+  top: 19px;
+  font-weight: 700;
+  transform: rotate(-8.25deg);
+  box-shadow: 0 0 7px rgba(255, 255, 255, 0.8);
+}
+.pv-pink {
+  background: #d5406f;
+}
+.pv-pk-text {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  width: 213px;
+  display: grid;
+  gap: 6px;
+  transform: translateY(-50%);
+}
+.pv-pk-title {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 500;
+}
+.pv-pk-sub {
+  font-size: 14px;
+  line-height: 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+.pv-pk-pic {
+  position: absolute;
+  left: 212px;
+  top: 12px;
+  width: 140px;
+  height: 140px;
 }
 
-/* tab bar + gesture handle */
+/* full-width product banners in «Кредиты» and «Депозиты» */
+.pv-wide {
+  position: relative;
+  height: 106px;
+  margin: 14px 16px 0;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #ebeef2;
+  color: var(--app-ink);
+}
+.pv-wide-glow {
+  position: absolute;
+  width: 524px;
+  height: 524px;
+  max-width: none;
+}
+.pv-loans .pv-wide-glow {
+  right: -199px;
+  bottom: -352px;
+}
+.pv-deposits .pv-wide-glow {
+  left: -39.5px;
+  bottom: -350px;
+}
+.pv-wide-title {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.pv-ln-money {
+  position: absolute;
+  right: -36px;
+  top: -21px;
+  width: 192px;
+  height: 192px;
+  display: grid;
+  place-items: center;
+}
+.pv-ln-money img {
+  width: 152.5px;
+  height: 152.5px;
+  transform: rotate(17.75deg);
+}
+.pv-ln-chip {
+  right: 84px;
+  top: 49px;
+  font-weight: 600;
+  transform: rotate(-5.87deg);
+}
+.pv-dp-pic {
+  position: absolute;
+  left: 169px;
+  top: -13px;
+  width: 173px;
+  height: 173px;
+}
+
+/* tab bar + home indicator */
 .pv-tabs {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 84px;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  align-items: start;
-  padding: 9px 6px 0;
-  background: rgba(255, 255, 255, 0.94);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 -1px 0 var(--app-line);
+  height: 85px;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: blur(25px);
+  backdrop-filter: blur(25px);
 }
 .pv-tab {
+  flex: 1;
+  min-width: 0;
   display: grid;
   justify-items: center;
-  gap: 3px;
-  min-width: 0;
-  color: var(--app-ink-3);
+  gap: 5px;
+  color: #7d828b;
 }
 .pv-tab.is-on {
   color: var(--app-green);
 }
+.pv-tab-ic {
+  width: 24px;
+  height: 24px;
+}
 .pv-tab-label {
-  max-width: 100%;
-  font-size: 11px;
-  font-weight: 600;
+  max-width: 68px;
+  font-size: 10px;
+  line-height: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.pv-tab.is-on .pv-tab-label {
+  font-weight: 500;
 }
 .pv-gesture {
   position: absolute;
   left: 50%;
   bottom: 8px;
-  width: 108px;
-  height: 4px;
-  margin-left: -54px;
-  border-radius: 2px;
+  width: 134px;
+  height: 5px;
+  margin-left: -67px;
+  border-radius: 100px;
   background: var(--app-ink);
-  opacity: 0.85;
 }
 
 /* the banner in flight from the editor to its slot */
@@ -585,13 +728,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pv-device,
-  .pv-track,
-  .pv-dot {
+  .pv-track {
     transition-duration: 1ms;
   }
 }
 :root.reduce-motion .pv-device,
-:root.reduce-motion .pv-track,
-:root.reduce-motion .pv-dot {
+:root.reduce-motion .pv-track {
   transition-duration: 1ms;
 }

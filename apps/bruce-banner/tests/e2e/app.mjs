@@ -167,7 +167,7 @@ try {
     return { colors: colors.size, w: r.width, scale: c.width / 328, visible: getComputedStyle(c).opacity };
   });
   check(slot.colors > 30 && slot.visible === '1', `the banner is drawn in the phone's slot (${slot.colors} colours)`);
-  check(Math.abs(slot.w / (await bb(() => document.querySelector('.pv-phone').getBoundingClientRect().width / 380)) - 328) < 1, 'the slot is 328 px of the 360 px screen');
+  check(Math.abs(slot.w / (await bb(() => document.querySelector('.pv-phone').getBoundingClientRect().width / 399)) - 328) < 1, 'the slot is 328 px of the 375 px screen');
   await page.click('#preview .pv-dock .seg [data-value="uz"]');
   await wait(500);
   check((await page.textContent('#preview .pv-bal-label')) === 'Umumiy balans', 'UZ switches the app screen too');

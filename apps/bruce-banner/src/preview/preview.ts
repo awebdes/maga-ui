@@ -1,25 +1,29 @@
 /**
- * The banner where it will live: its slot on the Ipoteka home screen, on an Android phone at
- * 360×800, where the slot is 328 = 360 − 2×16 wide, so the banner shows 1:1. The language switches
- * the banner and the whole screen; «Все языки» puts a phone per language side by side. On entry
- * the banner flies from the editor into its slot; with reduced motion it fades.
+ * The banner where it will live: its slot in the banner carousel of the Ipoteka home screen
+ * (Figma «1.0. Home Page», First Enter / Main), on an iPhone at 375×812, where the slot is 328×106,
+ * so the banner shows 1:1. The language switches the banner and the whole screen; «Все языки» puts
+ * a phone per language side by side. On entry the banner flies from the editor into its slot; with
+ * reduced motion it fades.
  */
-import { LANG_LABEL, TEMPLATES, docFromTemplate, type BannerDoc, type Lang } from '../engine';
+import { LANG_LABEL, type BannerDoc, type Lang } from '../engine';
 import { drawBanner } from '../render/draw';
-import { assetUrl } from '../render/images';
 import { initSeg, initToggle, type SegApi } from '../ui/kit/components';
 import { reduced } from '../ui/kit/core';
 import { h, icon } from '../app/dom';
 import type { Editor, EditorEvent } from '../app/state';
-import { STRINGS } from './strings';
+import { STRINGS, type ScreenStrings } from './strings';
 import './preview.css';
 
-const PHONE = { w: 360, h: 800, bezel: 10 };
-/** the banner slot on the home screen; the radius is a guess until we have the real screen */
-export const SLOT = { x: 16, w: 328, h: 106, radius: 12, gap: 8 };
+const PHONE = { w: 375, h: 812, bezel: 12 };
+/** the banner slot in the home screen's carousel, as in Figma */
+export const SLOT = { x: 16, w: 328, h: 106, radius: 18, gap: 10 };
 const LANG_NAME: Record<Lang, string> = { ru: 'Русский', uz: 'O‘zbekcha', en: 'English' };
-/** official banners that share the carousel with the one being made */
-const NEIGHBOURS = ['cumulative', 'humo', 'daromax', 'mortgage'];
+
+// screen pictures are brand files (gitignored while the repo is public): a missing one leaves an empty spot
+const pics = import.meta.glob('../brand/home/*', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const pic = (file: string) => pics[`../brand/home/${file}`] ?? '';
+const icons = import.meta.glob('./icons/*.svg', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const ico = (name: string) => icons[`./icons/${name}.svg`] ?? '';
 
 interface Device {
   lang: Lang;
@@ -28,8 +32,8 @@ interface Device {
   screen: HTMLElement;
   promo: HTMLElement;
   track: HTMLElement;
-  slides: { canvas: HTMLCanvasElement; doc: () => BannerDoc }[];
-  dots: HTMLElement[];
+  own: HTMLCanvasElement;
+  slides: number;
   index: number;
 }
 
@@ -38,7 +42,6 @@ export class Preview {
   private all = false;
   private scale = 1;
   private devices: Device[] = [];
-  private neighbours: BannerDoc[] = [];
   private seg: SegApi | null = null;
   private stageEl: HTMLElement | null = null;
   private resizeQueued = false;
@@ -68,14 +71,11 @@ export class Preview {
     if (!doc) return;
     clearTimeout(this.leaveTimer);
     this.lang = doc.languages.enabled.includes(this.editor.lang) ? this.editor.lang : doc.languages.primary;
-    this.neighbours = NEIGHBOURS.filter((id) => id !== doc.template && TEMPLATES.some((t) => t.id === id))
-      .slice(0, 2)
-      .map((id) => docFromTemplate(id, { now: 0 }));
     this.root.hidden = false;
     this.root.classList.remove('is-open', 'is-leaving');
     this.build();
     const from = this.all || reduced() ? null : this.hooks.sourceRect();
-    const own = this.devices[0]?.slides[0].canvas;
+    const own = this.devices[0]?.own;
     const target = own?.getBoundingClientRect();
     // entry: devices start low and transparent, then spring into place
     this.root.classList.add('is-entering');
@@ -146,7 +146,7 @@ export class Preview {
     this.stageEl = h('div', { class: 'pv-stage' });
     this.root.replaceChildren(
       h('div', { class: 'pv-backdrop', 'aria-hidden': 'true' }),
-      h('div', { class: 'pv-top' }, h('div', { class: 'island glass' }, back), h('p', { class: 'pv-note', text: 'Экран приложения — реконструкция по дизайн-системе: важно, как баннер смотрится в слоте 328×106.' })),
+      h('div', { class: 'pv-top' }, h('div', { class: 'island glass' }, back), h('p', { class: 'pv-note', text: 'Главная Ipoteka из Figma, баннер в карусели 328×106. Соседние баннеры листаются.' })),
       this.stageEl,
       h('div', { class: 'pv-bottom' }, dock),
     );
@@ -224,116 +224,131 @@ export class Preview {
 
   private draw(d: Device) {
     const dpr = (window.devicePixelRatio || 1) * this.scale;
-    for (const s of d.slides) drawBanner(s.canvas, s.doc(), d.lang, SLOT.w, { dpr });
+    drawBanner(d.own, this.editor.doc!, d.lang, SLOT.w, { dpr });
   }
 
   /* ---------- one phone ---------- */
 
   private device(lang: Lang): Device {
-    const doc = () => this.editor.doc!;
-    const t = (key: string, cls = '') => h('span', { class: `pv-t ${cls}`.trim(), 'data-s': key });
+    const t = (key: keyof ScreenStrings | string, cls = '') => h('span', { class: `pv-t ${cls}`.trim(), 'data-s': key });
+    const img = (src: string, cls: string) => h('img', { class: cls, src, alt: '', draggable: 'false' });
     const status = h(
       'div',
       { class: 'pv-status' },
       h('span', { class: 'pv-time', text: '9:41' }),
-      h('i', { class: 'pv-punch', 'aria-hidden': 'true' }),
-      h('span', { class: 'pv-sys', html: SYS_ICONS }),
+      h('span', { class: 'pv-sys' }, img(ico('sb-cell'), 'pv-sb-cell'), img(ico('sb-wifi'), 'pv-sb-wifi'), h('i', { class: 'pv-battery', 'aria-hidden': 'true' }), img(ico('sb-cap'), 'pv-sb-cap')),
     );
+    const hero = h('div', { class: 'pv-hero', 'aria-hidden': 'true' }, img(pic('header-bg.jpg'), 'pv-hero-bg'), img(pic('header-shape.svg'), 'pv-hero-shape'));
     const head = h(
       'header',
       { class: 'pv-head' },
-      h('span', { class: 'pv-avatar', 'data-s': 'initial' }),
-      h('span', { class: 'pv-hello' }, t('greeting', 'pv-greet'), t('name', 'pv-name')),
-      h('span', { class: 'pv-bell', html: svg(ICON.bell) }),
-    );
-    const balance = h(
-      'section',
-      { class: 'pv-balance' },
-      h('div', { class: 'pv-bal-top' }, t('balance', 'pv-bal-label'), h('span', { class: 'pv-eye', html: svg(ICON.eye) })),
-      h('div', { class: 'pv-bal-amount' }, t('amount', 'pv-amount'), t('currency', 'pv-cur')),
-      h('div', { class: 'pv-bal-link' }, t('accounts'), h('span', { class: 'pv-chev', html: svg(ICON.chev) })),
-    );
-    const cards = h(
-      'div',
-      { class: 'pv-cards' },
-      ...(['card-humo-a', 'card-humo-b', 'card-visa-gold'] as const).map((id, i) => h('div', { class: 'pv-card' }, h('img', { src: assetUrl(id) ?? '', alt: '', draggable: 'false' }), t(`card${i}`, 'pv-card-label'))),
-    );
-    const actions = h(
-      'nav',
-      { class: 'pv-actions' },
-      ...[ICON.transfer, ICON.pay, ICON.loan, ICON.deposit].map((ic, i) => h('span', { class: 'pv-action' }, h('span', { class: 'pv-action-ic', html: svg(ic) }), t(`action${i}`, 'pv-action-label'))),
-    );
-    const own = h('canvas', { class: 'pv-banner', role: 'img', 'aria-label': `Баннер, ${LANG_NAME[lang]}` });
-    const others = this.neighbours.map(() => h('canvas', { class: 'pv-banner', 'aria-hidden': 'true' }));
-    const track = h('div', { class: 'pv-track' }, h('div', { class: 'pv-slide is-own' }, own), ...others.map((c) => h('div', { class: 'pv-slide' }, c)));
-    const dots = [own, ...others].map((_, i) => h('i', { class: `pv-dot${i === 0 ? ' is-on' : ''}` }));
-    const promo = h('section', { class: 'pv-promo', 'aria-label': 'Баннеры' }, h('div', { class: 'pv-viewport' }, track), h('div', { class: 'pv-dots', 'aria-hidden': 'true' }, ...dots));
-    const ops = h(
-      'section',
-      { class: 'pv-ops' },
-      h('div', { class: 'pv-ops-head' }, t('recent', 'pv-h'), t('all', 'pv-link')),
-      ...[ICON.cart, ICON.car, ICON.arrowIn, ICON.bag].map((ic, i) =>
-        h('div', { class: `pv-op${i === 2 ? ' is-in' : ''}` }, h('span', { class: 'pv-op-ic', html: svg(ic) }), h('span', { class: 'pv-op-text' }, t(`op${i}.title`, 'pv-op-title'), t(`op${i}.meta`, 'pv-op-meta')), t(`op${i}.amount`, 'pv-op-amount')),
+      status,
+      h('div', { class: 'pv-circles' }, img(ico('btn-user'), 'pv-circle'), img(ico('btn-qr-bell'), 'pv-circle-pair')),
+      h('section', { class: 'pv-balance' }, t('balance', 'pv-bal-label'), h('div', { class: 'pv-bal-amount' }, t('amount', 'pv-amount'), t('currency', 'pv-cur'))),
+      h(
+        'div',
+        { class: 'pv-tile' },
+        h('span', { class: 'pv-tile-card' }, img(ico('plus'), 'pv-plus')),
+        h('span', { class: 'pv-tile-text' }, t('newCard', 'pv-tile-title'), t('newCardSub', 'pv-tile-sub')),
       ),
     );
+    const search = h(
+      'section',
+      { class: 'pv-widget pv-search' },
+      h('span', { class: 'pv-input' }, t('search', 'pv-placeholder')),
+      h('span', { class: 'pv-qr' }, img(ico('scan-qr'), 'pv-qr-ic')),
+    );
+    const own = h('canvas', { class: 'pv-banner', role: 'img', 'aria-label': `Баннер, ${LANG_NAME[lang]}` });
+    // the banners that are already in the carousel, as drawn in Figma
+    const autoloan = h(
+      'div',
+      { class: 'pv-slide pv-autoloan', 'aria-hidden': 'true' },
+      h('span', { class: 'pv-al-title' }, t('autoloan.0'), h('br'), t('autoloan.1')),
+      h('span', { class: 'pv-al-more' }, t('more')),
+      h('span', { class: 'pv-al-car' }, img(pic('car.png'), '')),
+    );
+    const daromax = h(
+      'div',
+      { class: 'pv-slide pv-daromax', 'aria-hidden': 'true' },
+      img(pic('glow-dark.svg'), 'pv-dm-glow'),
+      t('daromax', 'pv-dm-title'),
+      img(pic('deposit.png'), 'pv-dm-pic'),
+      h('span', { class: 'pv-chip pv-dm-chip' }, t('upTo18')),
+    );
+    const card = h(
+      'div',
+      { class: 'pv-slide pv-pink', 'aria-hidden': 'true' },
+      h('span', { class: 'pv-pk-text' }, t('card', 'pv-pk-title'), t('cardSub', 'pv-pk-sub')),
+      img(pic('card-pink.png'), 'pv-pk-pic'),
+    );
+    const track = h('div', { class: 'pv-track' }, h('div', { class: 'pv-slide is-own' }, own), autoloan, daromax, card);
+    const promo = h('section', { class: 'pv-widget pv-promo', 'aria-label': 'Баннеры' }, track);
+    const loans = h(
+      'section',
+      { class: 'pv-widget pv-group' },
+      t('loans', 'pv-h'),
+      h(
+        'div',
+        { class: 'pv-wide pv-loans', 'aria-hidden': 'true' },
+        img(pic('glow-light.svg'), 'pv-wide-glow'),
+        h('span', { class: 'pv-ln-money' }, img(pic('money.png'), '')),
+        h('span', { class: 'pv-chip pv-ln-chip' }, t('in2min')),
+        h('span', { class: 'pv-wide-title' }, t('loansBanner.0'), h('br'), t('loansBanner.1')),
+      ),
+    );
+    const deposits = h(
+      'section',
+      { class: 'pv-widget pv-group' },
+      t('deposits', 'pv-h'),
+      h(
+        'div',
+        { class: 'pv-wide pv-deposits', 'aria-hidden': 'true' },
+        img(pic('glow-light.svg'), 'pv-wide-glow'),
+        h('span', { class: 'pv-wide-title' }, t('depositsBanner.0'), h('br'), t('depositsBanner.1')),
+        img(pic('deposit.png'), 'pv-dp-pic'),
+      ),
+    );
+    const tabNames = ['nav-home', 'nav-wallet', 'nav-transfer', 'nav-history', 'nav-chat'];
     const tabs = h(
       'nav',
       { class: 'pv-tabs' },
-      ...[ICON.home, ICON.pay, ICON.transfer, ICON.clock, ICON.grid].map((ic, i) => h('span', { class: `pv-tab${i === 0 ? ' is-on' : ''}` }, h('span', { class: 'pv-tab-ic', html: svg(ic) }), t(`tab${i}`, 'pv-tab-label'))),
+      ...tabNames.map((n, i) => h('span', { class: `pv-tab${i === 0 ? ' is-on' : ''}` }, img(ico(n), 'pv-tab-ic'), t(`tabs.${i}`, 'pv-tab-label'))),
+      h('i', { class: 'pv-gesture', 'aria-hidden': 'true' }),
     );
-    const screen = h('div', { class: 'pv-screen', lang }, status, h('div', { class: 'pv-scroll' }, head, balance, cards, actions, promo, ops), tabs, h('i', { class: 'pv-gesture', 'aria-hidden': 'true' }));
-    const phone = h('div', { class: 'pv-phone' }, screen, h('i', { class: 'pv-btn pv-power', 'aria-hidden': 'true' }), h('i', { class: 'pv-btn pv-vol', 'aria-hidden': 'true' }));
+    const scroll = h('div', { class: 'pv-scroll' }, hero, head, h('div', { class: 'pv-widgets' }, search, promo, loans, deposits));
+    const screen = h('div', { class: 'pv-screen', lang }, scroll, h('i', { class: 'pv-island', 'aria-hidden': 'true' }), tabs);
+    const phone = h(
+      'div',
+      { class: 'pv-phone' },
+      screen,
+      h('i', { class: 'pv-btn pv-power', 'aria-hidden': 'true' }),
+      h('i', { class: 'pv-btn pv-vol', 'aria-hidden': 'true' }),
+      h('i', { class: 'pv-btn pv-vol2', 'aria-hidden': 'true' }),
+    );
     const el = h('figure', { class: 'pv-device', 'aria-label': `Превью, ${LANG_NAME[lang]}` }, phone);
     if (this.all) el.append(h('figcaption', { class: 'pv-caption mono', text: `${LANG_LABEL[lang]} · ${LANG_NAME[lang]}` }));
-    const d: Device = {
-      lang,
-      el,
-      phone,
-      screen,
-      promo,
-      track,
-      slides: [{ canvas: own, doc }, ...others.map((canvas, i) => ({ canvas, doc: () => this.neighbours[i] }))],
-      dots,
-      index: 0,
-    };
+    const d: Device = { lang, el, phone, screen, promo, track, own, slides: track.children.length, index: 0 };
     this.fillStrings(d);
     this.swipe(d);
     return d;
   }
 
   private fillStrings(d: Device) {
-    const s = STRINGS[d.lang];
-    const value: Record<string, string> = {
-      greeting: s.greeting,
-      name: s.name,
-      initial: s.name[0],
-      balance: s.balance,
-      amount: s.amount,
-      currency: s.currency,
-      accounts: s.accounts,
-      recent: s.recent,
-      all: s.all,
-    };
-    s.cards.forEach((c, i) => (value[`card${i}`] = c));
-    s.actions.forEach((c, i) => (value[`action${i}`] = c));
-    s.tabs.forEach((c, i) => (value[`tab${i}`] = c));
-    s.ops.forEach((o, i) => {
-      value[`op${i}.title`] = o.title;
-      value[`op${i}.meta`] = o.meta;
-      value[`op${i}.amount`] = o.amount;
-    });
+    const s = STRINGS[d.lang] as unknown as Record<string, string | string[]>;
     d.screen.setAttribute('lang', d.lang);
-    d.slides[0].canvas.setAttribute('aria-label', `Баннер, ${LANG_NAME[d.lang]}`);
-    for (const el of d.screen.querySelectorAll<HTMLElement>('[data-s]')) el.textContent = value[el.dataset.s!] ?? '';
+    d.own.setAttribute('aria-label', `Баннер, ${LANG_NAME[d.lang]}`);
+    for (const el of d.screen.querySelectorAll<HTMLElement>('[data-s]')) {
+      const [key, i] = el.dataset.s!.split('.');
+      const v = s[key];
+      el.textContent = (Array.isArray(v) ? v[Number(i)] : v) ?? '';
+    }
   }
 
   /* ---------- carousel ---------- */
 
   private go(d: Device, index: number) {
-    const n = d.slides.length;
-    d.index = Math.max(0, Math.min(n - 1, index));
+    d.index = Math.max(0, Math.min(d.slides - 1, index));
     d.track.style.transform = `translateX(${-d.index * (SLOT.w + SLOT.gap)}px)`;
-    d.dots.forEach((dot, i) => dot.classList.toggle('is-on', i === d.index));
   }
 
   /** Swipe the banners like in the app; a short flick is enough, the ends rubber-band. */
@@ -351,7 +366,7 @@ export class Preview {
     d.promo.addEventListener('pointermove', (e) => {
       if (!start || e.pointerId !== start.id) return;
       dx = (e.clientX - start.x) / this.scale;
-      const max = (d.slides.length - 1) * step;
+      const max = (d.slides - 1) * step;
       let x = -d.index * step + dx;
       if (x > 0) x = x * 0.35;
       if (x < -max) x = -max + (x + max) * 0.35;
@@ -398,29 +413,3 @@ export class Preview {
     window.setTimeout(done, 1400);
   }
 }
-
-/* ---------- icons of the app screen (24px line icons) ---------- */
-
-const ICON = {
-  bell: '<path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
-  eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>',
-  chev: '<path d="M9.5 6l6 6-6 6"/>',
-  transfer: '<path d="M4.5 8.5h14l-3.5-3.5"/><path d="M19.5 15.5h-14l3.5 3.5"/>',
-  pay: '<rect x="4.5" y="3.5" width="15" height="17" rx="2.5"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/>',
-  loan: '<circle cx="12" cy="12" r="8.5"/><path d="M9 15l6-6"/><circle cx="9.3" cy="9.3" r="1.1"/><circle cx="14.7" cy="14.7" r="1.1"/>',
-  deposit: '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="12" cy="12" r="3.2"/><path d="M12 8.8V7.5M15.2 12h1.3"/>',
-  cart: '<path d="M3.5 4.5h2.2l2 10.5h10l1.8-7.5H7"/><circle cx="9.5" cy="19" r="1.3"/><circle cx="16.5" cy="19" r="1.3"/>',
-  car: '<path d="M4.5 16.5v-4l2-5h11l2 5v4"/><path d="M3.5 12.5h17v4h-17z"/><circle cx="7.5" cy="16.5" r="1.6"/><circle cx="16.5" cy="16.5" r="1.6"/>',
-  arrowIn: '<path d="M12 4.5v12"/><path d="M6.5 11l5.5 5.5 5.5-5.5"/><path d="M5 20h14"/>',
-  bag: '<path d="M5.5 8h13l-1 12h-11z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
-  home: '<path d="M4 11l8-6.5 8 6.5v8.5h-5.5v-5h-5v5H4z"/>',
-  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
-  grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>',
-};
-
-const svg = (paths: string) => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
-
-const SYS_ICONS =
-  '<svg viewBox="0 0 18 12" aria-hidden="true"><path d="M1 11h2.2V8.2H1zM5 11h2.2V6.2H5zM9 11h2.2V4H9zM13 11h2.2V1.5H13z" fill="currentColor"/></svg>' +
-  '<svg viewBox="0 0 16 12" aria-hidden="true"><path d="M8 11.2l2.3-2.6a3.2 3.2 0 0 0-4.6 0zM3.5 6.3a6.4 6.4 0 0 1 9 0l1.6-1.8a8.8 8.8 0 0 0-12.2 0z" fill="currentColor"/></svg>' +
-  '<svg viewBox="0 0 26 12" aria-hidden="true"><rect x="0.5" y="0.5" width="22" height="11" rx="3" fill="none" stroke="currentColor" opacity=".45"/><rect x="2" y="2" width="16" height="8" rx="1.8" fill="currentColor"/><path d="M24 4v4a2 2 0 0 0 0-4z" fill="currentColor" opacity=".45"/></svg>';
