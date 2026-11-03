@@ -231,7 +231,8 @@ export class Preview {
 
   private device(lang: Lang): Device {
     const t = (key: keyof ScreenStrings | string, cls = '') => h('span', { class: `pv-t ${cls}`.trim(), 'data-s': key });
-    const img = (src: string, cls: string) => h('img', { class: cls, src, alt: '', draggable: 'false' });
+    // a picture missing from the build leaves its spot empty rather than a broken image
+    const img = (src: string, cls: string) => (src ? h('img', { class: cls, src, alt: '', draggable: 'false' }) : null);
     const status = h(
       'div',
       { class: 'pv-status' },
