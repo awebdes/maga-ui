@@ -3,7 +3,7 @@ import '../ui/kit/components.css';
 import '../ui/kit/stage.css';
 import '../ui/kit/coach.css';
 import './styles.css';
-import { ASSETS, LANGS, addLayer, docFromTemplate, duplicateLayer, findLayer, newId, removeLayer, replaceArt, setAsset, type BannerDoc, type Lang, type Layer } from '../engine';
+import { ASSETS, LANGS, addLayer, docFromTemplate, duplicateLayer, findLayer, newId, removeLayer, replaceArt, setAsset, setHidden, type BannerDoc, type Lang, type Layer } from '../engine';
 import { opaqueBox } from '../render/alpha';
 import { contrastIssues } from '../render/contrast';
 import { drawBanner, renderToBlob } from '../render/draw';
@@ -117,7 +117,7 @@ const home = new Home($('#home')!, {
   aiState: () => aiState,
 });
 const variants = new Variants(editor, $('#variants')!, {
-  openDoc: (doc, opts) => void openDoc(doc, { save: true, suggestArt: opts?.suggestArt }),
+  openDoc: (doc, opts) => void openDoc(doc, { save: true, drawArt: opts?.drawArt }),
   backHome: () => void goHome(),
 }, access);
 
@@ -200,7 +200,7 @@ const route = (id?: string) => (id ? `#/b/${id}` : '#/');
 /** a banner not saved yet (a template nobody touched) has no address to come back to */
 const UNSAVED = '#/new';
 
-async function openDoc(doc: BannerDoc, opts: { save?: boolean; saved?: boolean; suggestArt?: string; replaceHash?: boolean } = {}) {
+async function openDoc(doc: BannerDoc, opts: { save?: boolean; saved?: boolean; drawArt?: string; replaceHash?: boolean } = {}) {
   await flushSave();
   pop.closeAll();
   void preloadDoc(doc);
@@ -211,18 +211,25 @@ async function openDoc(doc: BannerDoc, opts: { save?: boolean; saved?: boolean; 
   if (location.hash !== hash) history[opts.replaceHash ? 'replaceState' : 'pushState'](null, '', hash);
   setSaveState('saved');
   if (opts.save) void flushSave();
-  if (opts.suggestArt && aiOn()) suggestArt(opts.suggestArt);
+  if (opts.drawArt) drawArt(opts.drawArt);
   else maybeTour();
 }
 
-/** After an AI variant: the art layer is selected and the drawing panel opens with what to draw. */
-function suggestArt(subject: string) {
-  const art = editor.doc?.layers.find((l) => l.kind === 'image' || l.kind === 'imageClip');
+/**
+ * After an AI variant whose subject has no picture in the library: the art layer is selected and
+ * the drawing starts at once; it lands on the banner by itself. Without AI the stand-in comes back.
+ */
+function drawArt(subject: string) {
+  const art = editor.doc?.layers.find((l) => l.kind === 'image');
   if (!art) return;
+  if (!aiOn()) {
+    if (art.hidden) editor.change((d) => setHidden(d, art.id, false));
+    return;
+  }
   editor.select(art.id);
   requestAnimationFrame(() => requestAnimationFrame(() => {
     const anchor = $('#inspector [data-gen]');
-    if (anchor) artGen.open(art.id, anchor, subject);
+    if (anchor) artGen.open(art.id, anchor, subject, true);
   }));
 }
 

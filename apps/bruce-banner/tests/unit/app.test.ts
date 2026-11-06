@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { layoutIssues, overlapIssues, penetration } from '../../src/engine/checks';
 import { layoutBanner } from '../../src/engine/layout';
-import { findLayer, replaceArt, setLanguageEnabled, setText } from '../../src/engine/ops';
+import { findLayer, replaceArt, setAsset, setHidden, setLanguageEnabled, setText } from '../../src/engine/ops';
 import { docFromTemplate } from '../../src/engine/templates';
 import type { ImageLayer } from '../../src/engine/types';
 import { slug } from '../../src/app/dom';
@@ -82,5 +82,18 @@ describe('overlap', () => {
     setText(d, 'title', 'ru', 'Кредит наличными до ста миллионов сумов на любые цели');
     setText(d, 'badge', 'ru', '');
     expect(overlapIssues(d, layoutBanner(d, 'ru', fakeMeasure))).toEqual([]);
+  });
+});
+
+describe('a hidden stand-in picture', () => {
+  it('comes back when a picture is chosen or drawn for the layer', () => {
+    const doc = docFromTemplate('loan', { now: 0 });
+    const art = doc.layers.find((l) => l.kind === 'image') as ImageLayer;
+    setHidden(doc, art.id, true);
+    setAsset(doc, art.id, 'deposit-time');
+    expect(findLayer(doc, art.id)?.hidden).toBeUndefined();
+    setHidden(doc, art.id, true);
+    replaceArt(doc, art.id, 'blob:x', 1);
+    expect(findLayer(doc, art.id)?.hidden).toBeUndefined();
   });
 });

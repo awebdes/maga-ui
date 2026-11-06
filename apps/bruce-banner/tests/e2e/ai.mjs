@@ -123,9 +123,31 @@ try {
   check((await bb(() => localStorage.getItem('bb:code'))) === '"team-code"', 'the code stays in this browser');
   await page.unroute('**/api/ai/brief');
 
+  /* ---------- a subject the library has no picture for ---------- */
+  await page.click('#var-back');
+  await page.waitForFunction(() => window.__bb.editor.mode === 'home');
+  await page.fill('#brief textarea', 'Пройдите опрос о нашем приложении');
+  await page.click('#brief-go');
+  await page.waitForSelector('.var-card:not(.is-skeleton)', { timeout: 15000 });
+  check(/Нарисуем: Пройдите опрос/.test(await page.textContent('.var-card:first-child .var-tags')), 'a survey brief says the illustration will be drawn, not taken from the library');
+  await page.click('.var-card:first-child .cell.primary');
+  await page.waitForFunction(() => window.__bb.editor.mode === 'editor');
+  await page.waitForFunction(
+    () => {
+      const a = window.__bb.editor.doc.layers.find((l) => l.kind === 'image');
+      return a && !a.hidden && !/^[a-z-]+$/.test(a.src);
+    },
+    null,
+    { timeout: 20000 },
+  );
+  check(true, 'taking it draws the illustration and puts it on the banner by itself');
+
   /* ---------- failures read as words ---------- */
   await page.route('**/api/ai/brief', (route) => route.abort('connectionrefused'));
-  await page.click('#var-more');
+  await page.click('#home-btn');
+  await page.waitForFunction(() => window.__bb.editor.mode === 'home');
+  await page.fill('#brief textarea', 'Кредит до 100 млн сум');
+  await page.click('#brief-go');
   await page.waitForFunction(() => document.querySelector('#var-status')?.dataset.state === 'error');
   check(/Сервер не отвечает|Нет интернета/.test(await page.textContent('#var-status')), 'a dead server is said in words, with a retry');
   await page.unroute('**/api/ai/brief');

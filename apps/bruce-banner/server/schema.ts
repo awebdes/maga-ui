@@ -27,10 +27,11 @@ export function briefSchema(c: Catalog) {
             theme: { type: 'string', enum: c.themes.map((t) => t.id) },
             copy: { type: 'object', properties: Object.fromEntries(SLOT_KEYS.map((k) => [k, langText])), required: ['title'] },
             art: { type: 'string', enum: c.assets.map((a) => a.id) },
-            generate: { type: 'string', description: 'Russian, one short phrase naming one object, or empty' },
+            art_fit: { type: 'string', enum: ['exact', 'none'], description: 'exact: the picture shows this very product; none: nothing in the library does' },
+            generate: { type: 'string', description: 'with art_fit "none": Russian, one short phrase naming one object to draw; otherwise empty' },
             why: { type: 'string' },
           },
-          required: ['layout', 'theme', 'copy', 'art', 'why'],
+          required: ['layout', 'theme', 'copy', 'art', 'art_fit', 'why'],
         },
       },
     },
@@ -117,6 +118,17 @@ export function parseIllustration(raw: unknown): IllustrationRequest {
 
 /* ---------- model answers ---------- */
 
+/**
+ * What to draw: only when the model said no library picture fits. A "none" without a subject
+ * draws from the title; an "exact" with a subject keeps the library picture (nothing is spent).
+ */
+function drawing(v: { art_fit?: string; generate?: string }, title: string) {
+  const subject = clip(v.generate, 240).trim();
+  if (v.art_fit === 'exact') return undefined;
+  if (v.art_fit === 'none') return subject || title.replace(/\n/g, ' ').trim() || undefined;
+  return subject || undefined;
+}
+
 /** Keeps the answer inside the catalog and the chosen layout's slots; Uzbek gets its ‘. */
 export function cleanVariants(raw: unknown, c: Catalog): Variant[] {
   const list = ((raw as { variants?: unknown[] })?.variants ?? []).slice(0, 3);
@@ -124,7 +136,7 @@ export function cleanVariants(raw: unknown, c: Catalog): Variant[] {
   const themeIds = new Set(c.themes.map((t) => t.id));
   const assetIds = new Set(c.assets.map((a) => a.id));
   const out: Variant[] = [];
-  for (const v of list as Partial<Variant>[]) {
+  for (const v of list as (Partial<Variant> & { art_fit?: string })[]) {
     const layout = c.layouts.find((l) => l.id === v.layout) ?? (layoutIds.size ? c.layouts[0] : undefined);
     if (!layout) continue;
     const copy: Record<string, LangText> = {};
@@ -139,7 +151,7 @@ export function cleanVariants(raw: unknown, c: Catalog): Variant[] {
       theme: v.theme && themeIds.has(v.theme) ? v.theme : layout.theme,
       copy,
       art: v.art && assetIds.has(v.art) ? v.art : (layout.art ?? c.assets[0]?.id ?? ''),
-      generate: clip(v.generate, 240).trim() || undefined,
+      generate: drawing(v, copy.title.ru),
       why: clip(v.why, 200).trim(),
     });
   }

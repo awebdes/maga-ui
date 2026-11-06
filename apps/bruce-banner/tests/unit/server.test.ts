@@ -72,6 +72,13 @@ describe('/api/ai/brief (mock)', () => {
     for (const v of r.variants) expect(['loan', 'emptyloan']).toContain(v.layout);
   });
 
+  it('a topic no layout covers asks for a drawing, a covered one does not', async () => {
+    const survey = await (await handleBrief(post('/api/ai/brief', { brief: 'Пройдите опрос о нашем приложении', catalog }), mock)).json();
+    for (const v of survey.variants) expect(v.generate).toBe('Пройдите опрос о нашем приложении');
+    const loan = await (await handleBrief(post('/api/ai/brief', { brief: 'Кредит до 100 млн сум', catalog }), mock)).json();
+    for (const v of loan.variants) expect(v.generate).toBeUndefined();
+  });
+
   it('rejects bad requests in words', async () => {
     const short = await handleBrief(post('/api/ai/brief', { brief: 'ой', catalog }), mock);
     expect(short.status).toBe(400);
@@ -160,6 +167,23 @@ describe('model answers are kept inside the catalog', () => {
     expect(out[0].copy).not.toHaveProperty('bogus');
     expect(out[1].layout).toBe(catalog.layouts[0].id);
     expect(out[1].theme).toBe('night');
+  });
+
+  it('draws only what the library has no picture for', () => {
+    const v = (extra: object) => ({ layout: 'loan', copy: { title: { ru: 'Пройдите\nопрос', uz: 'So‘rovnoma', en: 'Survey' } }, art: 'deposit-time', why: 'w', ...extra });
+    const [exact, none, bare] = cleanVariants({ variants: [v({ art_fit: 'exact', generate: 'сейф' }), v({ art_fit: 'none', generate: 'планшет с анкетой' }), v({ art_fit: 'none' })] }, catalog);
+    const [legacy] = cleanVariants({ variants: [v({ generate: 'машина' })] }, catalog);
+    expect(exact.generate).toBeUndefined();
+    expect(none.generate).toBe('планшет с анкетой');
+    expect(bare.generate).toBe('Пройдите опрос');
+    expect(legacy.generate).toBe('машина');
+  });
+
+  it('tells the model that money-adjacent is not a match', async () => {
+    const { briefSystem } = await import('../../server/prompts');
+    const sys = briefSystem(catalog);
+    expect(sys).toMatch(/"art_fit": "exact" only when/);
+    expect(sys).toMatch(/survey/);
   });
 
   it('cleans texts', () => {

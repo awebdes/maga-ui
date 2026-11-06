@@ -34,6 +34,8 @@ export function mockBrief(req: BriefRequest, model = 'mock'): BriefResponse {
   const fresh = matched.filter((id) => !req.avoid?.includes(id));
   // «Ещё варианты» on a topic with no unseen layouts left: the same layouts in other themes
   const again = fresh.length === 0 && matched.length > 0;
+  // a topic no official layout covers has no picture in the library either: the app draws one
+  const draw = matched.length ? undefined : req.brief.replace(/\s+/g, ' ').trim().slice(0, 120) || undefined;
   let picks = fresh.length ? fresh : matched;
   if (!picks.length) picks = FALLBACK.filter((id) => ids.has(id) && !req.avoid?.includes(id));
   if (!picks.length) picks = FALLBACK.filter((id) => ids.has(id));
@@ -49,7 +51,7 @@ export function mockBrief(req: BriefRequest, model = 'mock'): BriefResponse {
     const theme = order.find((t) => !used.has(`${id}:${t}`)) ?? l.theme;
     used.add(`${id}:${theme}`);
     const why = i === 0 && !again ? 'Демо: ближайший официальный шаблон с его текстом' : theme === l.theme ? 'Демо: другая раскладка на ту же тему' : 'Демо: тот же текст в другой теме';
-    return { layout: id, theme, copy, art: l.art ?? req.catalog.assets[0]?.id ?? '', generate: undefined, why };
+    return { layout: id, theme, copy, art: l.art ?? req.catalog.assets[0]?.id ?? '', generate: draw, why };
   });
   return { variants, mock: true, model };
 }

@@ -169,8 +169,11 @@ export function wrap180(d: number) {
 export function setAsset(doc: BannerDoc, id: string, ref: string) {
   const l = findLayer(doc, id);
   if (!l) return;
-  if (l.kind === 'image' || l.kind === 'card' || l.kind === 'imageClip') l.src = ref;
-  else if (l.kind === 'pill') l.icon = ref;
+  if (l.kind === 'image' || l.kind === 'card' || l.kind === 'imageClip') {
+    l.src = ref;
+    // a picture chosen for a layer is meant to be seen (an AI variant hides its stand-in)
+    l.hidden = undefined;
+  } else if (l.kind === 'pill') l.icon = ref;
 }
 
 export function setTheme(doc: BannerDoc, themeId: string) {
@@ -435,6 +438,7 @@ export function replaceArt(doc: BannerDoc, id: string, ref: string, aspect: numb
   l.w = Math.min(vw, vh * aspect);
   l.h = l.w / aspect;
   l.src = ref;
+  l.hidden = undefined;
 }
 
 export function setFlip(doc: BannerDoc, id: string, flip: boolean) {

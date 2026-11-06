@@ -15,6 +15,7 @@ import {
   layoutIssues,
   replaceArt,
   setAsset,
+  setHidden,
   setTexts,
   setTheme,
   templateById,
@@ -41,7 +42,8 @@ import type { Editor } from './state';
 export type AiState = 'loading' | 'live' | 'mock' | 'off';
 
 export interface FlowHooks {
-  openDoc(doc: BannerDoc, opts?: { suggestArt?: string }): void;
+  /** `drawArt`: no library picture fits, draw this one right away */
+  openDoc(doc: BannerDoc, opts?: { drawArt?: string }): void;
   backHome(): void;
 }
 
@@ -64,6 +66,8 @@ export function docFromVariant(v: Variant, brief: string, mock: boolean): Banner
     const isCard = v.art.startsWith('card-');
     if ((art.kind === 'card') === isCard && art.kind !== 'imageClip') setAsset(doc, art.id, v.art);
   }
+  // nothing in the library shows the subject: no stand-in picture, the drawing takes its place
+  if (art?.kind === 'image' && v.generate) setHidden(doc, art.id, true);
   doc.brief = brief;
   return doc;
 }
@@ -174,7 +178,7 @@ export class Variants {
         const issues = item.doc.languages.enabled.flatMap((l) => layoutIssues(item.doc, layoutBanner(item.doc, l, measure)).filter((x) => x.severity !== 'hint'));
         const bad = issues.some((x) => x.severity === 'error');
         const take = h('button', { class: 'cell primary', 'data-juice': '' }, h('span', { text: 'Взять этот' }), icon('i-arrow-right'));
-        const open = () => this.hooks.openDoc(structuredClone(item.doc), { suggestArt: item.v.generate });
+        const open = () => this.hooks.openDoc(structuredClone(item.doc), { drawArt: item.v.generate });
         take.addEventListener('click', open);
         juice.bind(take);
         const pickBtn = h('button', { class: 'var-canvas', 'aria-label': `Вариант ${i + 1}: открыть в редакторе` }, canvas);
@@ -186,7 +190,7 @@ export class Variants {
           h(
             'div',
             { class: 'var-meta' },
-            h('div', { class: 'var-tags' }, h('span', { class: 'tag', text: theme.label }), tpl ? h('span', { class: 'tag', text: tpl.label }) : null, item.v.generate ? h('span', { class: 'tag ai', text: 'AI нарисует иллюстрацию' }) : null),
+            h('div', { class: 'var-tags' }, h('span', { class: 'tag', text: theme.label }), tpl ? h('span', { class: 'tag', text: tpl.label }) : null, item.v.generate ? h('span', { class: 'tag ai', title: item.v.generate, text: `Нарисуем: ${item.v.generate}` }) : null),
             item.v.why ? h('p', { class: 'var-why', text: item.v.why }) : null,
             issues.length ? h('p', { class: `var-issues${bad ? '' : ' is-warn'}` }, icon('i-warn', 'i i-sm'), issues.map((x) => `${LANG_LABEL[x.lang]}: ${x.message}`).join(' · ')) : h('p', { class: 'var-ok' }, icon('i-check', 'i i-sm'), 'Влезает во всех языках'),
             take,
@@ -316,6 +320,7 @@ export class ArtGenerator {
   private layerId: string | null = null;
   private ctrl: AbortController | null = null;
   private keyed: { blob: Blob; width: number; height: number } | null = null;
+  private auto = false;
 
   constructor(
     private editor: Editor,
@@ -341,7 +346,9 @@ export class ArtGenerator {
     document.body.append(this.el);
   }
 
-  open(layerId: string, anchor: HTMLElement, suggestion?: string) {
+  /** `auto`: start drawing at once and put the result on the banner without asking */
+  open(layerId: string, anchor: HTMLElement, suggestion?: string, auto = false) {
+    this.auto = auto;
     this.layerId = layerId;
     this.keyed = null;
     this.place.disabled = true;
@@ -354,7 +361,8 @@ export class ArtGenerator {
     this.el.style.top = `${Math.max(12, Math.min(r.top - 60, innerHeight - 580))}px`;
     this.el.style.right = `${Math.max(12, innerWidth - side.left + 12)}px`;
     pop.open(this.el, anchor, { onClose: () => this.ctrl?.abort() });
-    requestAnimationFrame(() => this.prompt.focus());
+    if (auto) void this.generate();
+    else requestAnimationFrame(() => this.prompt.focus());
   }
 
   close() {
@@ -387,9 +395,14 @@ export class ArtGenerator {
       this.result.replaceChildren(h('img', { src: url, alt: subject }));
       this.state.textContent = res.mock ? 'Демо-режим: это заготовка, настоящая иллюстрация появится с ключом Gemini' : keyed.borderFlat < 0.85 ? 'Фон был неровным: проверьте края' : 'Готово';
       this.place.disabled = false;
+      if (this.auto) {
+        this.auto = false;
+        await this.apply();
+      }
     } catch (e) {
       const err = e as AiError;
-      if (err.code !== 'aborted') this.state.textContent = err.message || 'Не получилось нарисовать';
+      this.auto = false;
+      if (err.code !== 'aborted') this.state.textContent = `${err.message || 'Не получилось нарисовать'}. Нажмите «Нарисовать» ещё раз или выберите картинку из библиотеки справа.`;
     } finally {
       this.go.disabled = false;
       juice.hold(this.go, false);

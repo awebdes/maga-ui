@@ -42,7 +42,10 @@ export interface Variant {
   copy: Record<string, LangText>;
   /** a library asset id for the main illustration */
   art: string;
-  /** the illustration to draw when the library has nothing close (Russian, one phrase the person can edit) */
+  /**
+   * set only when no library picture shows the subject (then `art` is a placeholder that is never
+   * shown): the illustration to draw, one Russian phrase; the app draws it when the variant is taken
+   */
   generate?: string;
   /** why this variant, one Russian sentence for the person choosing */
   why: string;
