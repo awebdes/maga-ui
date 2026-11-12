@@ -24,7 +24,7 @@ export class Team {
     private editor: Editor,
     private hooks: { reopen(doc: BannerDoc): void; note(text: string, tip?: string): void },
   ) {
-    this.statusBtn = h('button', { class: 'cell clear st-btn', 'aria-haspopup': 'menu', 'aria-controls': 'st-menu', 'data-tip': 'Статус в библиотеке команды' }, h('span', { class: 'st-pill' }), icon('i-down', 'i i-sm'));
+    this.statusBtn = h('button', { class: 'cell clear st-btn', 'aria-haspopup': 'menu', 'aria-controls': 'st-menu', 'data-tip': 'Статус в библиотеке команды' }, h('span', { class: 'st-pill' }));
     this.statusMenu = h(
       'div',
       { class: 'menu below', id: 'st-menu', role: 'menu', style: 'width:220px' },
