@@ -14,7 +14,8 @@
     "e2e:parity": "node tests/e2e/parity.mjs",
     "e2e:fonts": "node tests/e2e/fonts.mjs",
     "e2e:app": "node tests/e2e/app.mjs",
-    "e2e:ai": "node tests/e2e/ai.mjs"
+    "e2e:ai": "node tests/e2e/ai.mjs",
+    "e2e:library": "node tests/e2e/library.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

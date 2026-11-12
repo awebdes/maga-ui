@@ -1731,3 +1731,133 @@ button.var-canvas:hover {
 :root.reduce-motion .gen-result img {
   animation: none;
 }
+
+/* ---------- team library ---------- */
+
+.st-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-12);
+  white-space: nowrap;
+  color: var(--fg-2);
+  background: rgba(255, 255, 255, 0.07);
+}
+.st-pill::before,
+.st-dot {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+}
+.st-pill.is-review,
+.st-dot.is-review {
+  color: #ffc46b;
+}
+.st-pill.is-review {
+  background: rgba(255, 196, 107, 0.12);
+}
+.st-pill.is-approved,
+.st-dot.is-approved {
+  color: #7ee08a;
+}
+.st-pill.is-approved {
+  background: rgba(126, 224, 138, 0.12);
+}
+.st-dot.is-draft {
+  color: var(--fg-2);
+}
+.st-btn {
+  gap: 4px;
+  padding: 0 6px 0 4px;
+}
+.st-btn[hidden],
+.st-sep[hidden] {
+  display: none;
+}
+#st-menu .menu-item[aria-current="true"] {
+  background: rgba(255, 255, 255, 0.06);
+}
+.proj-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.proj-date .st-pill {
+  height: 18px;
+}
+.proj-note,
+.proj-none {
+  margin: -6px 0 14px;
+  color: var(--fg-3);
+  font-size: var(--fs-13);
+}
+.conflict-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 5px 5px 5px 12px;
+  border-radius: var(--r-pill);
+  color: #ffd9a0;
+  font-size: var(--fs-12);
+  box-shadow: var(--shadow-island), 0 0 0 1px rgba(255, 196, 107, 0.35) inset;
+  animation: rise var(--t-pop) var(--spring) both;
+}
+.conflict-bar[hidden] {
+  display: none;
+}
+.conflict-bar .cell {
+  height: 28px;
+}
+.float.tc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.join-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 24px;
+  align-items: center;
+  grid-column: 1 / -1;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 0 1px var(--line) inset;
+}
+.join-text {
+  display: grid;
+  gap: 4px;
+  max-width: 460px;
+  color: var(--fg-2);
+  font-size: var(--fs-13);
+}
+.join-text strong {
+  color: var(--fg-1, #fff);
+  font-size: var(--fs-15, 15px);
+  font-weight: 600;
+}
+.join-fields {
+  display: flex;
+  gap: 8px;
+}
+.join-fields .field {
+  width: 200px;
+}
+.join-err {
+  grid-column: 1 / -1;
+  margin: 0;
+  min-height: 16px;
+  color: #ff9a9d;
+  font-size: var(--fs-12);
+}

@@ -7,7 +7,8 @@ import { drawBanner } from '../render/draw';
 import { pop } from '../ui/kit/core';
 import { initPrompt, type PromptApi } from '../ui/kit/prompt';
 import { ago, h, icon } from './dom';
-import { listProjects, loadThumb, type ProjectMeta } from './storage';
+import { STATUS_LABEL, type TeamBanner } from './library';
+import { listProjects, loadThumb } from './storage';
 
 export interface HomeHooks {
   brief(text: string): void;
@@ -18,6 +19,23 @@ export interface HomeHooks {
   exportProject(id: string): void;
   importFile(file: File): void;
   aiState(): 'live' | 'mock' | 'off' | 'loading';
+  /** the team library, when this build has one */
+  team?: {
+    ready(): boolean;
+    list(): Promise<TeamBanner[]>;
+    join(name: string, code: string): Promise<void>;
+  };
+}
+
+/** What a card needs: a local banner, or a library banner (status, who, its picture). */
+interface CardData {
+  id: string;
+  name: string;
+  updatedAt: number;
+  status?: TeamBanner['status'];
+  by?: string | null;
+  thumbUrl?: string | null;
+  localOnly?: boolean;
 }
 
 export const EXAMPLES = [
@@ -102,15 +120,79 @@ export class Home {
   }
 
   async renderProjects() {
-    const list = await listProjects();
+    const local = await listProjects();
     const wrap = this.root.querySelector('#projects')!;
     const section = this.root.querySelector<HTMLElement>('#projects-section')!;
-    section.hidden = list.length === 0;
-    wrap.replaceChildren(...(await Promise.all(list.slice(0, 24).map((m) => this.projectCard(m)))));
+    const title = section.querySelector('.home-h2')!;
+    const note = section.querySelector<HTMLElement>('#projects-note')!;
+    note.hidden = true;
+    const team = this.hooks.team;
+    if (!team) {
+      title.textContent = 'Мои баннеры';
+      section.hidden = local.length === 0;
+      wrap.replaceChildren(...(await Promise.all(local.slice(0, 24).map((m) => this.projectCard(m)))));
+      return;
+    }
+    section.hidden = false;
+    title.textContent = 'Баннеры команды';
+    if (!team.ready()) {
+      wrap.replaceChildren(this.joinCard());
+      return;
+    }
+    let shared: TeamBanner[] = [];
+    try {
+      shared = await team.list();
+    } catch (e) {
+      note.hidden = false;
+      note.textContent = `${(e as Error).message}. Показаны баннеры из этого браузера.`;
+    }
+    const ids = new Set(shared.map((b) => b.id));
+    const cards: CardData[] = [
+      ...shared.map((b) => ({ id: b.id, name: b.name, updatedAt: Date.parse(b.updated_at), status: b.status, by: b.updated_by, thumbUrl: b.thumbUrl })),
+      ...local.filter((m) => !ids.has(m.id)).map((m) => ({ ...m, localOnly: true })),
+    ];
+    if (!cards.length) {
+      wrap.replaceChildren(h('p', { class: 'proj-none', text: 'Пока пусто. Первый баннер, который вы сохраните, увидит вся команда.' }));
+      return;
+    }
+    wrap.replaceChildren(...(await Promise.all(cards.slice(0, 60).map((m) => this.projectCard(m)))));
   }
 
-  private async projectCard(m: ProjectMeta) {
-    let url = this.thumbs.get(`${m.id}:${m.updatedAt}`);
+  /** Name and team code, once per browser. */
+  private joinCard() {
+    const name = h('input', { class: 'field', autocomplete: 'name', 'aria-label': 'Ваше имя', placeholder: 'Ваше имя — его увидят коллеги' });
+    const code = h('input', { class: 'field', type: 'password', autocomplete: 'off', 'aria-label': 'Код команды', placeholder: 'Код команды' });
+    const err = h('p', { class: 'join-err', role: 'alert' });
+    const go = h('button', { class: 'cell primary', type: 'submit' }, h('span', { text: 'Войти' }));
+    const form = h(
+      'form',
+      { class: 'join-card' },
+      h('div', { class: 'join-text' }, h('strong', { text: 'Общая библиотека' }), h('span', { text: 'Баннеры видит и правит вся команда, со статусами «черновик → на согласовании → утверждён». Код спросите у команды дизайна.' })),
+      h('div', { class: 'join-fields' }, name, code, go),
+      err,
+    );
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!name.value.trim() || !code.value.trim()) {
+        err.textContent = 'Нужны имя и код';
+        return;
+      }
+      go.disabled = true;
+      err.textContent = '';
+      try {
+        await this.hooks.team!.join(name.value, code.value);
+        await this.renderProjects();
+      } catch (x) {
+        err.textContent = (x as Error).message;
+      } finally {
+        go.disabled = false;
+      }
+    });
+    return form;
+  }
+
+  private async projectCard(m: CardData) {
+    let url = m.thumbUrl ?? this.thumbs.get(`${m.id}:${m.updatedAt}`);
     if (!url) {
       const blob = await loadThumb(m.id);
       if (blob) {
@@ -118,7 +200,10 @@ export class Home {
         this.thumbs.set(`${m.id}:${m.updatedAt}`, url);
       }
     }
-    const open = h('button', { class: 'proj-open', 'aria-label': `Открыть «${m.name}»` }, h('span', { class: 'proj-img' }, url ? h('img', { src: url, alt: '' }) : h('span', { class: 'proj-empty' })), h('span', { class: 'proj-name', text: m.name }), h('span', { class: 'proj-date', text: ago(m.updatedAt) }));
+    const meta = m.status
+      ? h('span', { class: 'proj-date' }, h('span', { class: `st-pill is-${m.status}`, text: STATUS_LABEL[m.status] }), h('span', { text: `${m.by ?? ''} · ${ago(m.updatedAt)}` }))
+      : h('span', { class: 'proj-date', text: m.localOnly && this.hooks.team ? `только в этом браузере · ${ago(m.updatedAt)}` : ago(m.updatedAt) });
+    const open = h('button', { class: 'proj-open', 'aria-label': `Открыть «${m.name}»` }, h('span', { class: 'proj-img' }, url ? h('img', { src: url, alt: '' }) : h('span', { class: 'proj-empty' })), h('span', { class: 'proj-name', text: m.name }), meta);
     open.addEventListener('click', () => this.hooks.openProject(m.id));
     const menuId = `pm-${m.id}`;
     const more = h('button', { class: 'cell clear icon-btn sm proj-more', 'aria-label': 'Ещё', 'aria-haspopup': 'menu', 'aria-controls': menuId }, icon('i-dots', 'i i-sm'));
@@ -143,7 +228,7 @@ export class Home {
       item('Дублировать', 'i-duplicate', () => this.hooks.duplicateProject(m.id)),
       item('Скачать файл баннера', 'i-file', () => this.hooks.exportProject(m.id)),
       h('div', { class: 'menu-sep' }),
-      item('Удалить', 'i-trash', () => this.hooks.deleteProject(m.id), 'Точно удалить? Нажмите ещё раз'),
+      item(m.status ? 'Удалить у всех' : 'Удалить', 'i-trash', () => this.hooks.deleteProject(m.id), m.status ? 'Удалится у всей команды. Ещё раз' : 'Точно удалить? Нажмите ещё раз'),
     );
     more.addEventListener('click', () =>
       pop.toggle(menu, more, {
@@ -151,7 +236,7 @@ export class Home {
           const armed = menu.querySelector('.is-armed');
           if (armed) {
             armed.classList.remove('is-armed');
-            armed.querySelector('span')!.textContent = 'Удалить';
+            armed.querySelector('span')!.textContent = m.status ? 'Удалить у всех' : 'Удалить';
           }
         },
       }),

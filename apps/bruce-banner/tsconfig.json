@@ -16,5 +16,5 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["src", "tests/unit", "vite.config.ts", "vite-api.ts"]
+  "include": ["src", "tests/unit", "vite.config.ts", "vite-api.ts", "supabase/functions/library/handler.ts", "supabase/functions/library/memory.ts"]
 }

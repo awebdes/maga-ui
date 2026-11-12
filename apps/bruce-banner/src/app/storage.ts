@@ -133,6 +133,11 @@ export async function listArt(limit = 24): Promise<ArtMeta[]> {
   return out;
 }
 
+/** What is known about a stored picture (size, AI or upload), if it is one of «Мои картинки». */
+export async function getArtMeta(ref: string): Promise<ArtMeta | null> {
+  return (await safe(() => get<ArtMeta>(ref, db().art), undefined)) ?? null;
+}
+
 export async function getImageBlob(ref: string): Promise<Blob | null> {
   return (await safe(() => get<Blob>(ref, db().blobs), undefined)) ?? null;
 }

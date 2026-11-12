@@ -4,7 +4,7 @@
  * default export has `fetch(request: Request): Promise<Response>` (Vercel's Web signature).
  * Env comes from .env / .env.local via loadEnv; without GEMINI_API_KEY the handlers answer from mocks.
  */
-import { loadEnv, type Plugin } from 'vite';
+import { loadEnv, type Plugin, type ViteDevServer } from 'vite';
 import { Readable } from 'node:stream';
 import type { ReadableStream as NodeWebStream } from 'node:stream/web';
 
@@ -19,6 +19,9 @@ export function devApi(): Plugin {
     configureServer(server) {
       const env = loadEnv(server.config.mode, server.config.root, '');
       for (const [k, v] of Object.entries(env)) if (process.env[k] === undefined) process.env[k] = v;
+
+      // the team library in memory, for the e2e: VITE_LIBRARY_URL=/api/library, code LIBRARY_MOCK_CODE
+      if (process.env.VITE_LIBRARY_URL === '/api/library') server.middlewares.use(libraryMock(server));
 
       server.middlewares.use(async (req, res, next) => {
         // connect strips mount paths from req.url; route on the original
@@ -77,5 +80,57 @@ export function devApi(): Plugin {
         }
       });
     },
+  };
+}
+
+interface MockModule {
+  MemoryStore: new (base: string) => {
+    codes: Set<string>;
+    files: Map<string, { bytes: Uint8Array; type: string }>;
+  };
+}
+interface HandlerModule {
+  handle(req: Request, store: unknown): Promise<Response>;
+  sha256Hex(text: string): Promise<string>;
+}
+
+/** Serves supabase/functions/library with a memory store at /api/library, files at /api/library-file. */
+function libraryMock(server: ViteDevServer) {
+  let ready: Promise<{ store: InstanceType<MockModule['MemoryStore']>; handler: HandlerModule }> | null = null;
+  const load = () =>
+    (ready ??= (async () => {
+      const { MemoryStore } = (await server.ssrLoadModule('/supabase/functions/library/memory.ts')) as MockModule;
+      const handler = (await server.ssrLoadModule('/supabase/functions/library/handler.ts')) as HandlerModule;
+      const store = new MemoryStore('/api/library-file');
+      store.codes.add(await handler.sha256Hex(process.env.LIBRARY_MOCK_CODE ?? 'team-code'));
+      return { store, handler };
+    })());
+  return async (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse, next: () => void) => {
+    const url = (req as { originalUrl?: string }).originalUrl ?? req.url ?? '';
+    const file = /^\/api\/library-file\/(banner-images|banner-thumbs)\/([\w.-]+)/.exec(url);
+    if (!file && !/^\/api\/library\/?(\?.*)?$/.test(url)) return next();
+    const { store, handler } = await load();
+    const chunks: Buffer[] = [];
+    for await (const c of req) chunks.push(c as Buffer);
+    if (file) {
+      const key = `${file[1]}/${file[2]}`;
+      if (req.method === 'PUT') {
+        store.files.set(key, { bytes: new Uint8Array(Buffer.concat(chunks)), type: String(req.headers['content-type'] ?? 'image/png') });
+        res.statusCode = 200;
+        res.end('{}');
+        return;
+      }
+      const f = store.files.get(key);
+      res.statusCode = f ? 200 : 404;
+      if (f) res.setHeader('content-type', f.type);
+      res.end(f ? Buffer.from(f.bytes) : undefined);
+      return;
+    }
+    const headers = new Headers();
+    for (const [k, v] of Object.entries(req.headers)) if (typeof v === 'string') headers.set(k, v);
+    const response = await handler.handle(new Request(`http://${req.headers.host}${url}`, { method: req.method, headers, body: chunks.length ? Buffer.concat(chunks) : undefined }), store);
+    res.statusCode = response.status;
+    response.headers.forEach((v, k) => res.setHeader(k, v));
+    res.end(Buffer.from(await response.arrayBuffer()));
   };
 }

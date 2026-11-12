@@ -20,6 +20,8 @@ import { download, slug } from './dom';
 import { Dock } from './dock';
 import { ExportSheet } from './export';
 import { Home } from './home';
+import { deleteFromTeam, identity, join, libraryOn } from './library';
+import { Team } from './team';
 import { Inspector } from './inspector';
 import { Layers } from './layers';
 import { LayoutPicker } from './layouts';
@@ -115,6 +117,23 @@ const home = new Home($('#home')!, {
   exportProject: (id) => void exportProject(id),
   importFile: (file) => void importFile(file),
   aiState: () => aiState,
+  team: libraryOn()
+    ? {
+        ready: identity.ready,
+        list: () => team.list(),
+        join: async (name, code) => {
+          await join(name, code);
+        },
+      }
+    : undefined,
+});
+const team = new Team(editor, {
+  reopen: (doc) => void openDoc(doc, { saved: true, replaceHash: true }),
+  note: (text, tip) => {
+    saveText.textContent = text;
+    if (tip) saveText.parentElement!.dataset.tip = tip;
+    else delete saveText.parentElement!.dataset.tip;
+  },
 });
 const variants = new Variants(editor, $('#variants')!, {
   openDoc: (doc, opts) => void openDoc(doc, { save: true, drawArt: opts?.drawArt }),
@@ -180,11 +199,14 @@ function queueThumb(doc: BannerDoc) {
     const d = thumbFor;
     thumbFor = null;
     if (!d) return;
+    let thumb: Blob | null = null;
     try {
-      await saveThumb(d.id, await renderToBlob(d, d.languages.primary, 2));
+      thumb = await renderToBlob(d, d.languages.primary, 2);
+      await saveThumb(d.id, thumb);
     } catch {
       /* a missing thumbnail shows an empty card */
     }
+    team.pushLater(d, thumb);
   };
   if ('requestIdleCallback' in window) requestIdleCallback(() => void run(), { timeout: 2000 });
   else setTimeout(() => void run(), 300);
@@ -238,9 +260,16 @@ function drawArt(subject: string) {
 
 async function openProject(id: string, replaceHash = false) {
   if (editor.doc?.id === id && editor.mode !== 'home') return;
-  const doc = await loadProject(id);
+  let doc = await loadProject(id);
+  if (team.needsFetch(id, !!doc)) {
+    try {
+      doc = await team.fetch(id);
+    } catch (e) {
+      if (!doc) toast('Баннер не открылся', (e as Error).message, 'error');
+    }
+  }
   if (!doc) {
-    toast('Баннер не найден', 'в этом браузере его нет', 'error');
+    if (!libraryOn()) toast('Баннер не найден', 'в этом браузере его нет', 'error');
     history.replaceState(null, '', route());
     await goHome(false);
     return;
@@ -295,9 +324,19 @@ async function duplicateProject(id: string) {
 
 async function removeProject(id: string) {
   const meta = (await listProjects()).find((m) => m.id === id);
+  const shared = team.index.get(id);
+  if (shared) {
+    try {
+      await deleteFromTeam(id);
+      team.index.delete(id);
+    } catch (e) {
+      toast('Не удалилось', (e as Error).message, 'error');
+      return;
+    }
+  }
   await deleteProject(id);
   await home.renderProjects();
-  toast('Баннер удалён', meta?.name ?? '');
+  toast('Баннер удалён', shared ? `${shared.name} — у всей команды` : (meta?.name ?? ''));
 }
 
 async function exportProject(id: string) {
