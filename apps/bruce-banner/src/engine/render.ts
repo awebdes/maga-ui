@@ -11,6 +11,7 @@
  * `compat: true` reproduces the legacy output for the parity gate.
  */
 import { assetById } from './assets';
+import { luminance, parseColor } from './checks';
 import { fontCss } from './fonts';
 import { layoutBanner, type BannerLayout, type Measure } from './layout';
 import type {
@@ -47,6 +48,8 @@ export interface RenderOptions {
   skip?: (l: Layer) => boolean;
   /** a layout computed for the same doc, language and mode */
   layout?: BannerLayout;
+  /** draw a stand-in where a picture is still being drawn (app views); files leave the spot empty */
+  standIns?: boolean;
 }
 
 export function renderBanner(ctx: Ctx, doc: BannerDoc, o: RenderOptions): BannerLayout {
@@ -58,6 +61,21 @@ export function renderBanner(ctx: Ctx, doc: BannerDoc, o: RenderOptions): Banner
   if (o.background !== false) paintBackground(ctx, doc.background, doc.format.w * n, doc.format.h * n);
   for (const l of doc.layers) {
     if (l.hidden || o.skip?.(l)) continue;
+    if ((l.kind === 'image' || l.kind === 'imageClip') && l.awaiting) {
+      if (o.standIns) {
+        const light = isLight(doc.background);
+        if (l.kind === 'image') {
+          // the picture's frame often runs off the banner; the stand-in stays whole inside it
+          const size = Math.min(l.w, l.h, doc.format.h * 1.4);
+          const half = size * 0.5 * 0.75;
+          const cx = Math.min(Math.max(l.cx, half + 4), doc.format.w - half - 4);
+          const cy = Math.min(Math.max(l.cy, half + 4), doc.format.h - half - 4);
+          drawStandIn(ctx, cx, cy, size, l.rot, n, light);
+        }
+        else drawStandIn(ctx, l.box.x + l.box.width / 2, l.box.y + l.box.height / 2, Math.min(l.box.width, l.box.height), 0, n, light);
+      }
+      continue;
+    }
     drawLayer(ctx, l, n, lay, o);
   }
   ctx.restore();
@@ -147,6 +165,50 @@ function drawImage(ctx: Ctx, l: ImageLayer, n: number, o: RenderOptions) {
   if (l.rot) ctx.rotate((l.rot * Math.PI) / 180);
   if (l.flip) ctx.scale(-1, 1);
   ctx.drawImage(img, -w / 2, -h / 2, w, h);
+  ctx.restore();
+}
+
+const isLight = (bg: BannerDoc['background']) => {
+  const colors = bg.type === 'solid' ? [bg.color] : bg.stops.map((s) => s.color);
+  const l = colors.reduce((sum, c) => sum + luminance(parseColor(c)), 0) / colors.length;
+  return l > 0.45;
+};
+
+/**
+ * A picture still to come: a tilted rounded tile with a coin and an AI sparkle, in the brand
+ * illustrations' pose, quiet enough to read as «будет здесь» on any theme.
+ */
+function drawStandIn(ctx: Ctx, cx: number, cy: number, size: number, rot: number, n: number, light: boolean) {
+  const s = size * n * 0.5;
+  const ink = light ? '42, 43, 46' : '255, 255, 255';
+  const a = (k: number) => `rgba(${ink}, ${light ? k * 0.55 : k})`;
+  ctx.save();
+  ctx.translate(cx * n, cy * n);
+  ctx.rotate(((rot - 10) * Math.PI) / 180);
+  ctx.beginPath();
+  ctx.roundRect(-s / 2, -s / 2, s, s, s * 0.24);
+  ctx.fillStyle = a(0.14);
+  ctx.fill();
+  ctx.setLineDash([3 * n, 2.5 * n]);
+  ctx.lineWidth = Math.max(1, 0.9 * n);
+  ctx.strokeStyle = a(0.42);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(s * 0.42, s * 0.36, s * 0.17, 0, Math.PI * 2);
+  ctx.fillStyle = a(0.22);
+  ctx.fill();
+  // four-point sparkle
+  const r = s * 0.17;
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const ang = (i * Math.PI) / 4 - Math.PI / 2;
+    const rr = i % 2 ? r * 0.28 : r;
+    ctx.lineTo(Math.cos(ang) * rr, Math.sin(ang) * rr);
+  }
+  ctx.closePath();
+  ctx.fillStyle = a(0.7);
+  ctx.fill();
   ctx.restore();
 }
 

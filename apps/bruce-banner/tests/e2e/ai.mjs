@@ -135,7 +135,7 @@ try {
   await page.waitForFunction(
     () => {
       const a = window.__bb.editor.doc.layers.find((l) => l.kind === 'image');
-      return a && !a.hidden && !/^[a-z-]+$/.test(a.src);
+      return a && !a.awaiting && !a.hidden && !/^[a-z-]+$/.test(a.src);
     },
     null,
     { timeout: 20000 },

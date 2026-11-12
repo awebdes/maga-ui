@@ -15,7 +15,6 @@ import {
   layoutIssues,
   replaceArt,
   setAsset,
-  setHidden,
   setTexts,
   setTheme,
   templateById,
@@ -66,8 +65,8 @@ export function docFromVariant(v: Variant, brief: string, mock: boolean): Banner
     const isCard = v.art.startsWith('card-');
     if ((art.kind === 'card') === isCard && art.kind !== 'imageClip') setAsset(doc, art.id, v.art);
   }
-  // nothing in the library shows the subject: no stand-in picture, the drawing takes its place
-  if (art?.kind === 'image' && v.generate) setHidden(doc, art.id, true);
+  // nothing in the library shows the subject: a silhouette instead of a wrong picture until it is drawn
+  if ((art?.kind === 'image' || art?.kind === 'imageClip') && v.generate) art.awaiting = v.generate;
   doc.brief = brief;
   return doc;
 }

@@ -18,7 +18,7 @@ export function drawBanner(canvas: HTMLCanvasElement, doc: BannerDoc, lang: Lang
   const ctx = canvas.getContext('2d')!;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  return renderBanner(ctx, doc, { lang, scale, measure, image: getImage, skip: opts.skip });
+  return renderBanner(ctx, doc, { lang, scale, measure, image: getImage, skip: opts.skip, standIns: true });
 }
 
 /** Renders a finished file: waits for every image, draws at `scale`, returns a PNG or JPEG blob. */

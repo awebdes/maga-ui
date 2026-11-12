@@ -70,6 +70,11 @@ export interface ImageLayer extends LayerBase {
   rot: number;
   flip?: boolean;
   shadow?: Shadow;
+  /**
+   * the drawing this layer waits for (an AI variant whose subject has no library picture): the app
+   * shows a stand-in silhouette in its place, files leave the spot empty; `src` is not drawn
+   */
+  awaiting?: string;
 }
 
 /** An image drawn inside a fixed clip box (the big "0%"). */
@@ -78,6 +83,8 @@ export interface ImageClipLayer extends LayerBase {
   src: string;
   box: Box;
   img: Box;
+  /** the drawing this layer waits for; see ImageLayer.awaiting */
+  awaiting?: string;
 }
 
 export interface CardLayer extends LayerBase {

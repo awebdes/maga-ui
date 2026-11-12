@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { layoutIssues, overlapIssues, penetration } from '../../src/engine/checks';
 import { layoutBanner } from '../../src/engine/layout';
-import { findLayer, replaceArt, setAsset, setHidden, setLanguageEnabled, setText } from '../../src/engine/ops';
+import { renderBanner } from '../../src/engine/render';
+import { findLayer, replaceArt, setAsset, setLanguageEnabled, setText } from '../../src/engine/ops';
 import { docFromTemplate } from '../../src/engine/templates';
 import type { ImageLayer } from '../../src/engine/types';
 import { slug } from '../../src/app/dom';
@@ -85,15 +86,39 @@ describe('overlap', () => {
   });
 });
 
-describe('a hidden stand-in picture', () => {
-  it('comes back when a picture is chosen or drawn for the layer', () => {
+describe('a picture still to be drawn', () => {
+  /** a canvas context that records which images are drawn and whether anything is filled */
+  const recorder = () => {
+    const drawn: unknown[] = [];
+    let fills = 0;
+    const ctx = new Proxy({} as Record<string, unknown>, {
+      get: (t, k) => (k === 'drawImage' ? (img: unknown) => drawn.push(img) : k === 'fill' ? () => fills++ : k in t ? t[k as string] : k === 'measureText' ? () => ({ width: 10 }) : k === 'createLinearGradient' || k === 'createRadialGradient' ? () => ({ addColorStop() {} }) : () => {}),
+      set: (t, k, v) => ((t[k as string] = v), true),
+    });
+    return { ctx: ctx as unknown as CanvasRenderingContext2D, drawn, fills: () => fills };
+  };
+  it('shows a stand-in in the app and nothing in files, never the placeholder picture', () => {
     const doc = docFromTemplate('loan', { now: 0 });
     const art = doc.layers.find((l) => l.kind === 'image') as ImageLayer;
-    setHidden(doc, art.id, true);
+    art.awaiting = 'планшет с анкетой';
+    const image = (ref: string) => (ref === art.src ? ({ width: 1, height: 1, tag: 'stand-in source' } as unknown as ImageBitmap) : null);
+    const app = recorder();
+    renderBanner(app.ctx, doc, { lang: 'ru', scale: 1, measure: fakeMeasure, image, standIns: true });
+    const file = recorder();
+    renderBanner(file.ctx, doc, { lang: 'ru', scale: 1, measure: fakeMeasure, image, standIns: false });
+    expect(app.drawn).toHaveLength(0);
+    expect(file.drawn).toHaveLength(0);
+    expect(app.fills()).toBeGreaterThan(file.fills());
+  });
+
+  it('stops waiting when a picture is chosen or drawn for the layer', () => {
+    const doc = docFromTemplate('loan', { now: 0 });
+    const art = doc.layers.find((l) => l.kind === 'image') as ImageLayer;
+    art.awaiting = 'планшет с анкетой';
     setAsset(doc, art.id, 'deposit-time');
-    expect(findLayer(doc, art.id)?.hidden).toBeUndefined();
-    setHidden(doc, art.id, true);
+    expect((findLayer(doc, art.id) as ImageLayer).awaiting).toBeUndefined();
+    art.awaiting = 'планшет с анкетой';
     replaceArt(doc, art.id, 'blob:x', 1);
-    expect(findLayer(doc, art.id)?.hidden).toBeUndefined();
+    expect((findLayer(doc, art.id) as ImageLayer).awaiting).toBeUndefined();
   });
 });

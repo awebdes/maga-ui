@@ -3,7 +3,7 @@ import '../ui/kit/components.css';
 import '../ui/kit/stage.css';
 import '../ui/kit/coach.css';
 import './styles.css';
-import { ASSETS, LANGS, addLayer, docFromTemplate, duplicateLayer, findLayer, newId, removeLayer, replaceArt, setAsset, setHidden, type BannerDoc, type Lang, type Layer } from '../engine';
+import { ASSETS, LANGS, addLayer, docFromTemplate, duplicateLayer, findLayer, newId, removeLayer, replaceArt, setAsset, type BannerDoc, type Lang, type Layer } from '../engine';
 import { opaqueBox } from '../render/alpha';
 import { contrastIssues } from '../render/contrast';
 import { drawBanner, renderToBlob } from '../render/draw';
@@ -217,13 +217,16 @@ async function openDoc(doc: BannerDoc, opts: { save?: boolean; saved?: boolean; 
 
 /**
  * After an AI variant whose subject has no picture in the library: the art layer is selected and
- * the drawing starts at once; it lands on the banner by itself. Without AI the stand-in comes back.
+ * the drawing starts at once; it lands on the banner by itself. Without AI the library picture shows.
  */
 function drawArt(subject: string) {
-  const art = editor.doc?.layers.find((l) => l.kind === 'image');
+  const art = editor.doc?.layers.find((l) => (l.kind === 'image' || l.kind === 'imageClip') && l.awaiting);
   if (!art) return;
   if (!aiOn()) {
-    if (art.hidden) editor.change((d) => setHidden(d, art.id, false));
+    editor.change((d) => {
+      const l = findLayer(d, art.id);
+      if (l?.kind === 'image' || l?.kind === 'imageClip') l.awaiting = undefined;
+    });
     return;
   }
   editor.select(art.id);

@@ -171,8 +171,8 @@ export function setAsset(doc: BannerDoc, id: string, ref: string) {
   if (!l) return;
   if (l.kind === 'image' || l.kind === 'card' || l.kind === 'imageClip') {
     l.src = ref;
-    // a picture chosen for a layer is meant to be seen (an AI variant hides its stand-in)
-    l.hidden = undefined;
+    // a picture chosen for a layer ends the wait for a drawing
+    if (l.kind === 'image' || l.kind === 'imageClip') l.awaiting = undefined;
   } else if (l.kind === 'pill') l.icon = ref;
 }
 
@@ -438,7 +438,7 @@ export function replaceArt(doc: BannerDoc, id: string, ref: string, aspect: numb
   l.w = Math.min(vw, vh * aspect);
   l.h = l.w / aspect;
   l.src = ref;
-  l.hidden = undefined;
+  l.awaiting = undefined;
 }
 
 export function setFlip(doc: BannerDoc, id: string, flip: boolean) {
