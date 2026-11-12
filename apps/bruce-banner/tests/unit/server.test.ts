@@ -3,6 +3,7 @@ import { ASSETS, TEMPLATES, THEMES } from '../../src/engine';
 import type { Catalog } from '../../server/contracts';
 import { readEnv } from '../../server/env';
 import { extractImage, extractText } from '../../server/gemini';
+import { LIMITS } from '../../server/guard';
 import { handleBrief, handleIllustration, handleStatus, handleText } from '../../server/handlers';
 import { cleanTexts, cleanVariants } from '../../server/schema';
 
@@ -111,7 +112,8 @@ describe('guard', () => {
   it('limits drawings per minute per address, with Retry-After', async () => {
     const at = '172.16.0.9';
     let last: Response | null = null;
-    for (let i = 0; i < 9; i++) last = await handleIllustration(post('/api/ai/illustration', { subject: 'зелёная копилка' }, { 'x-forwarded-for': at }), mock);
+    // a request draws several options, so the limit is a few rounds of them, then 429
+    for (let i = 0; i <= LIMITS.image.n; i++) last = await handleIllustration(post('/api/ai/illustration', { subject: 'зелёная копилка' }, { 'x-forwarded-for': at }), mock);
     expect(last!.status).toBe(429);
     expect(Number(last!.headers.get('retry-after'))).toBeGreaterThan(0);
   });

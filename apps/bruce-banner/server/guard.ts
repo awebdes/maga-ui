@@ -11,7 +11,7 @@ import { HttpError } from './http.js';
 
 const buckets = new Map<string, { n: number; reset: number }>();
 
-export const LIMITS = { text: { n: 40, per: 60_000 }, image: { n: 8, per: 60_000 } } as const;
+export const LIMITS = { text: { n: 40, per: 60_000 }, image: { n: 12, per: 60_000 } } as const;
 
 function sameBytes(a: string, b: string) {
   const x = Buffer.from(a);

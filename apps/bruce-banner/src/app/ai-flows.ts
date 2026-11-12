@@ -309,16 +309,26 @@ export function keyOut(png: Blob): Promise<{ blob: Blob; width: number; height: 
 
 const b64ToBlob = (b64: string, type: string) => new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type });
 
+/** How many drawings one request makes: the person picks the best; each costs one image call. */
+export const DRAWINGS = 3;
+
+interface Tile {
+  el: HTMLButtonElement;
+  keyed: { blob: Blob; width: number; height: number } | null;
+  ref: string | null;
+}
+
 export class ArtGenerator {
   private el: HTMLElement;
   private prompt: ReturnType<typeof initPrompt>;
   private result: HTMLElement;
   private state: HTMLElement;
   private go: HTMLButtonElement;
-  private place: HTMLButtonElement;
+  private done: HTMLButtonElement;
   private layerId: string | null = null;
   private ctrl: AbortController | null = null;
-  private keyed: { blob: Blob; width: number; height: number } | null = null;
+  private tiles: Tile[] = [];
+  private placed = -1;
   private auto = false;
 
   constructor(
@@ -334,30 +344,28 @@ export class ArtGenerator {
     this.go = h('button', { class: 'cell primary', 'data-juice': '' }, h('span', { class: 'progress' }), icon('i-sparkle'), h('span', { class: 'label', text: 'Нарисовать' }));
     this.go.addEventListener('click', () => void this.generate());
     juice.bind(this.go);
-    this.place = h('button', { class: 'cell', disabled: true }, icon('i-check'), h('span', { text: 'Поставить на баннер' }));
-    this.place.addEventListener('click', () => void this.apply());
-    this.result = h('div', { class: 'gen-result checker' }, h('span', { class: 'gen-empty', text: 'Здесь появится иллюстрация на прозрачном фоне' }));
+    this.done = h('button', { class: 'cell' }, icon('i-check'), h('span', { text: 'Готово' }));
+    this.done.addEventListener('click', () => this.close());
+    this.result = h('div', { class: 'gen-result', role: 'listbox', 'aria-label': 'Варианты иллюстрации' });
     this.state = h('p', { class: 'gen-state', role: 'status', 'aria-live': 'polite' });
     this.el.append(
       h('div', { class: 'panel-head' }, h('div', { class: 'panel-title' }, h('span', { text: 'Нарисовать иллюстрацию' })), close),
-      h('div', { class: 'panel-body' }, promptEl, this.result, this.state, h('div', { class: 'gen-actions' }, this.go, this.place)),
+      h('div', { class: 'panel-body' }, promptEl, this.result, this.state, h('div', { class: 'gen-actions' }, this.go, this.done)),
     );
     document.body.append(this.el);
+    this.reset();
   }
 
-  /** `auto`: start drawing at once and put the result on the banner without asking */
+  /** `auto`: start drawing at once and put the first drawing on the banner without asking */
   open(layerId: string, anchor: HTMLElement, suggestion?: string, auto = false) {
     this.auto = auto;
     this.layerId = layerId;
-    this.keyed = null;
-    this.place.disabled = true;
-    this.result.replaceChildren(h('span', { class: 'gen-empty', text: 'Здесь появится иллюстрация на прозрачном фоне' }));
-    this.state.textContent = '';
+    this.reset();
     const doc = this.editor.doc;
     this.prompt.set(suggestion ?? (doc ? subjectFromDoc(doc) : ''));
     const r = anchor.getBoundingClientRect();
     const side = (anchor.closest('.panel') ?? anchor).getBoundingClientRect();
-    this.el.style.top = `${Math.max(12, Math.min(r.top - 60, innerHeight - 580))}px`;
+    this.el.style.top = `${Math.max(12, Math.min(r.top - 60, innerHeight - 600))}px`;
     this.el.style.right = `${Math.max(12, innerWidth - side.left + 12)}px`;
     pop.open(this.el, anchor, { onClose: () => this.ctrl?.abort() });
     if (auto) void this.generate();
@@ -369,52 +377,84 @@ export class ArtGenerator {
     if (pop.isOpen(this.el)) pop.close(this.el);
   }
 
-  private async generate(retried = false) {
+  private reset() {
+    this.tiles = [];
+    this.placed = -1;
+    this.state.textContent = '';
+    this.result.classList.remove('has-tiles');
+    this.result.replaceChildren(h('span', { class: 'gen-empty', text: `Здесь появятся ${DRAWINGS} варианта на прозрачном фоне — лучший ставится на баннер одним кликом` }));
+  }
+
+  private async generate() {
     const subject = this.prompt.value;
     if (subject.length < 3 || !this.layerId) return;
     this.ctrl?.abort();
     const ctrl = new AbortController();
     this.ctrl = ctrl;
-    this.place.disabled = true;
+    this.tiles = Array.from({ length: DRAWINGS }, (_, i) => {
+      const el = h('button', { class: 'gen-tile checker is-busy', role: 'option', 'aria-selected': 'false', 'aria-label': `Вариант ${i + 1}`, disabled: true });
+      el.addEventListener('click', () => void this.place(i));
+      return { el, keyed: null, ref: null };
+    });
+    this.placed = -1;
+    this.result.classList.add('has-tiles');
+    this.result.replaceChildren(...this.tiles.map((t) => t.el));
     this.go.disabled = true;
     juice.hold(this.go, true);
     kit.busy = true;
-    this.result.classList.add('is-busy');
-    this.state.textContent = retried ? 'Фон получился неровным — рисуем ещё раз…' : 'Рисуем… обычно 10–20 секунд';
-    try {
-      const res = await this.access.retry(() => ai.illustration({ subject, theme: this.editor.doc?.theme }, ctrl.signal));
-      this.state.textContent = 'Вырезаем фон…';
-      const keyed = await keyOut(b64ToBlob(res.image, res.mime));
-      if (keyed.borderFlat < 0.85 && !retried) {
-        await this.generate(true);
-        return;
-      }
-      this.keyed = keyed;
-      const url = URL.createObjectURL(keyed.blob);
-      this.result.replaceChildren(h('img', { src: url, alt: subject }));
-      this.state.textContent = res.mock ? 'Демо-режим: это заготовка, настоящая иллюстрация появится с ключом Gemini' : keyed.borderFlat < 0.85 ? 'Фон был неровным: проверьте края' : 'Готово';
-      this.place.disabled = false;
-      if (this.auto) {
-        this.auto = false;
-        await this.apply();
-      }
-    } catch (e) {
-      const err = e as AiError;
-      this.auto = false;
-      if (err.code !== 'aborted') this.state.textContent = `${err.message || 'Не получилось нарисовать'}. Нажмите «Нарисовать» ещё раз или выберите картинку из библиотеки справа.`;
-    } finally {
-      this.go.disabled = false;
-      juice.hold(this.go, false);
-      kit.busy = false;
-      this.result.classList.remove('is-busy');
+    this.state.textContent = `Рисуем ${DRAWINGS} варианта… обычно 10–20 секунд`;
+    let mock = false;
+    let failure: AiError | null = null;
+    await Promise.all(
+      this.tiles.map(async (tile, i) => {
+        try {
+          const r = await this.drawOne(subject, ctrl.signal);
+          if (ctrl.signal.aborted) return;
+          mock ||= r.mock;
+          tile.keyed = r.keyed;
+          tile.el.disabled = false;
+          tile.el.classList.remove('is-busy');
+          tile.el.replaceChildren(h('img', { src: URL.createObjectURL(r.keyed.blob), alt: `${subject}, вариант ${i + 1}` }));
+          if (this.auto && this.placed < 0) await this.place(i, true);
+        } catch (e) {
+          tile.el.classList.remove('is-busy');
+          tile.el.classList.add('is-failed');
+          if ((e as AiError).code !== 'aborted') failure ??= e as AiError;
+        }
+      }),
+    );
+    if (this.ctrl !== ctrl) return;
+    this.auto = false;
+    this.go.disabled = false;
+    juice.hold(this.go, false);
+    kit.busy = false;
+    const ready = this.tiles.filter((t) => t.keyed).length;
+    if (!ready) {
+      const f = failure as AiError | null;
+      this.state.textContent = `${f?.message || 'Не получилось нарисовать'}. Нажмите «Нарисовать» ещё раз или выберите картинку из библиотеки справа.`;
+      return;
     }
+    if (mock) this.state.textContent = 'Демо-режим: это заготовки, настоящие иллюстрации появятся с ключом Gemini';
+    else if (this.placed >= 0) this.state.textContent = 'Первый вариант уже на баннере. Нравится другой — нажмите на него';
+    else this.state.textContent = ready < DRAWINGS ? `Готово ${ready} из ${DRAWINGS}: нажмите на лучший, он встанет на баннер` : 'Нажмите на лучший — он встанет на баннер';
   }
 
-  private async apply() {
+  /** One drawing, keyed; a background that is not flat gets one more try. */
+  private async drawOne(subject: string, signal: AbortSignal, retried = false): Promise<{ keyed: { blob: Blob; width: number; height: number; borderFlat: number }; mock: boolean }> {
+    const res = await this.access.retry(() => ai.illustration({ subject, theme: this.editor.doc?.theme }, signal));
+    const keyed = await keyOut(b64ToBlob(res.image, res.mime));
+    if (keyed.borderFlat < 0.85 && !retried) return this.drawOne(subject, signal, true);
+    return { keyed, mock: res.mock };
+  }
+
+  /** Puts drawing `i` on the banner; another click swaps it for another drawing. */
+  private async place(i: number, quiet = false) {
     const id = this.layerId;
-    const keyed = this.keyed;
-    if (!id || !keyed) return;
-    const ref = await putImage(keyed.blob, { w: keyed.width, h: keyed.height, source: 'ai', subject: this.prompt.value });
+    const tile = this.tiles[i];
+    if (!id || !tile?.keyed) return;
+    const keyed = tile.keyed;
+    tile.ref ??= await putImage(keyed.blob, { w: keyed.width, h: keyed.height, source: 'ai', subject: this.prompt.value });
+    const ref = tile.ref;
     const old = this.editor.doc && findLayer(this.editor.doc, id);
     // the drawing is cropped tight: it takes the place the old picture visibly filled
     const visible = old?.kind === 'image' ? opaqueBox(old.src) : undefined;
@@ -427,8 +467,12 @@ export class ArtGenerator {
         if (l.kind === 'imageClip') l.img.height = (l.img.width * keyed.height) / keyed.width;
       }
     });
-    this.close();
-    toast('Иллюстрация на баннере', 'сохранена в этом браузере');
+    this.placed = i;
+    this.tiles.forEach((t, k) => {
+      t.el.classList.toggle('is-on', k === i);
+      t.el.setAttribute('aria-selected', String(k === i));
+    });
+    if (quiet) toast('Иллюстрация на баннере', 'ещё варианты — в панели справа');
   }
 }
 

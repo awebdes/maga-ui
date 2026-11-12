@@ -48,9 +48,10 @@ try {
   await page.waitForSelector('.gen-pop.is-open');
   await page.fill('.gen-pop textarea', 'зелёная копилка с оранжевой монетой');
   await page.click('.gen-pop .cell.primary');
-  await page.waitForSelector('.gen-result img', { timeout: 20000 });
+  await page.waitForFunction(() => document.querySelectorAll('.gen-tile img').length === 3 && !document.querySelector('.gen-pop .cell.primary[disabled]'), null, { timeout: 20000 });
+  check(true, 'one request makes three drawings to choose from');
   const keyed = await bb(async () => {
-    const img = document.querySelector('.gen-result img');
+    const img = document.querySelector('.gen-tile img');
     await img.decode();
     const c = new OffscreenCanvas(img.naturalWidth, img.naturalHeight);
     const x = c.getContext('2d');
@@ -61,10 +62,14 @@ try {
   });
   check(keyed.corner === 0 && keyed.centre === 255, `the magenta background is keyed out (corners ${keyed.corner}, centre ${keyed.centre})`);
   check(keyed.w < 1024 && keyed.h < 1024, `the drawing is cropped to the object (${keyed.w}×${keyed.h})`);
-  await page.click('.gen-pop .gen-actions .cell:not(.primary)');
+  check(await bb((id) => window.__bb.editor.doc.layers.find((l) => l.id === id).src, art.id) === art.src, 'nothing changes on the banner until one is picked');
+  await page.click('.gen-tile:nth-child(2)');
   await wait(400);
   const placed = await bb((id) => window.__bb.editor.doc.layers.find((l) => l.id === id), art.id);
-  check(placed.src.startsWith('blob:') && placed.w < art.w, `it replaces the illustration, fitted to the old picture (${art.w.toFixed(0)} → ${placed.w.toFixed(0)} px)`);
+  check(placed.src.startsWith('blob:') && placed.w < art.w, `a click puts it on the banner, fitted to the old picture (${art.w.toFixed(0)} → ${placed.w.toFixed(0)} px)`);
+  check((await page.getAttribute('.gen-tile:nth-child(2)', 'aria-selected')) === 'true', 'the picked drawing is marked');
+  await page.click('.gen-pop .gen-actions .cell:not(.primary)');
+  await wait(300);
 
   /* ---------- «Мои картинки»: the drawing is there in any banner ---------- */
   const drawn = placed.src;
