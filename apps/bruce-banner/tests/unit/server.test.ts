@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ASSETS, TEMPLATES, THEMES } from '../../src/engine';
 import type { Catalog } from '../../server/contracts';
 import { readEnv } from '../../server/env';
@@ -220,5 +220,22 @@ describe('Gemini response shapes', () => {
     expect(r).toEqual({ data: 'BBB', mime: 'image/png' });
     expect(extractImage({ candidates: [{ content: { parts: [{ inlineData: { data: 'CCC', mimeType: 'image/webp' } }] } }] })).toEqual({ data: 'CCC', mime: 'image/webp' });
     expect(extractImage({})).toBeNull();
+  });
+});
+
+describe('Gemini billing', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it('says in words that the prepaid balance ran out, without retrying', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string) => {
+      calls.push(url);
+      return new Response(JSON.stringify({ error: { code: 402, message: 'Your prepayment credits are depleted.' } }), { status: 402, headers: { 'content-type': 'application/json' } });
+    });
+    const res = await handleBrief(post('/api/ai/brief', { brief: 'Пройдите опрос о приложении', catalog }), readEnv({ GEMINI_API_KEY: 'test-key' }));
+    expect(res.status).toBe(402);
+    const body = await res.json();
+    expect(body.error).toBe('billing');
+    expect(body.message).toMatch(/баланс Gemini/);
+    expect(calls).toHaveLength(1);
   });
 });

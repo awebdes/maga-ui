@@ -58,6 +58,8 @@ async function call(opts: CallOpts): Promise<unknown> {
     const msg = safeMessage(body);
     if (res.status === 429) throw new HttpError(429, 'rate_limited', 'Лимит запросов к Gemini, попробуйте чуть позже', retry);
     if (res.status === 401 || res.status === 403) throw new HttpError(502, 'upstream_auth', 'Gemini не принял ключ');
+    // prepaid credits ran out (the spend limit on the Google side): not worth a retry
+    if (res.status === 402) throw new HttpError(402, 'billing', 'Закончился баланс Gemini: пополните его в Google AI Studio, AI снова заработает');
     if (res.status === 400 && /safety|blocked/i.test(msg)) throw new HttpError(422, 'blocked', 'Модель отказалась: попробуйте переформулировать');
     throw new HttpError(502, 'upstream', `Gemini: ${res.status} ${msg}`.slice(0, 300));
   }

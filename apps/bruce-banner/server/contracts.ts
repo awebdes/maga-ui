@@ -103,7 +103,7 @@ export interface StatusResponse {
 }
 
 export interface ApiError {
-  error: 'bad_request' | 'unauthorized' | 'forbidden_origin' | 'rate_limited' | 'timeout' | 'blocked' | 'upstream' | 'upstream_auth' | 'internal' | 'not_found';
+  error: 'bad_request' | 'unauthorized' | 'forbidden_origin' | 'rate_limited' | 'timeout' | 'blocked' | 'upstream' | 'upstream_auth' | 'billing' | 'internal' | 'not_found';
   message: string;
   retryAfter?: number;
 }
